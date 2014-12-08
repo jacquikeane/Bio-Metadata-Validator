@@ -37,7 +37,7 @@ isnt( Bio::Metadata::Validator::Plugin::Str->validate( ' '   ), 1, '"Str" invali
 
 # I guess this a valid test case for the Str validator, but I've no idea how to
 # decide whether an arbitrary unicode character constitutes a word character
-isnt( Bio::Metadata::Validator::Plugin::Str->validate( '§'   ), 1, '"Str" validates "§" correctly' );
+isnt( Bio::Metadata::Validator::Plugin::Str->validate( '§'   ), 1, '"Str" invalidates "§" correctly' );
 
 is  ( Bio::Metadata::Validator::Plugin::Enum->validate( 'ABC', { values => [ qw( ABC DEF ) ] } ), 1, '"Enum" validates "ABC" correctly' );
 is  ( Bio::Metadata::Validator::Plugin::Enum->validate( 'ABC', { values => [ qw( ABC ) ] } ), 1, '"Enum" validates "ABC" correctly against single field' );
@@ -58,10 +58,10 @@ SKIP: {
 is  ( Bio::Metadata::Validator::Plugin::Bool->validate( 1       ), 1, '"Bool" validates 1 correctly' );
 is  ( Bio::Metadata::Validator::Plugin::Bool->validate( 'yes'   ), 1, '"Bool" validates "yes" correctly' );
 is  ( Bio::Metadata::Validator::Plugin::Bool->validate( 'true'  ), 1, '"Bool" validates "true" correctly' );
-isnt( Bio::Metadata::Validator::Plugin::Bool->validate( 0       ), 1, '"Bool" invalidates 0 correctly' );
+is  ( Bio::Metadata::Validator::Plugin::Bool->validate( 0       ), 1, '"Bool" validates 0 correctly' );
+is  ( Bio::Metadata::Validator::Plugin::Bool->validate( 'no'    ), 1, '"Bool" validates "no" correctly' );
+is  ( Bio::Metadata::Validator::Plugin::Bool->validate( 'false' ), 1, '"Bool" validates "false" correctly' );
 isnt( Bio::Metadata::Validator::Plugin::Bool->validate( 2       ), 1, '"Bool" invalidates 2 correctly' );
-isnt( Bio::Metadata::Validator::Plugin::Bool->validate( 'no'    ), 1, '"Bool" invalidates "no" correctly' );
-isnt( Bio::Metadata::Validator::Plugin::Bool->validate( 'false' ), 1, '"Bool" invalidates "false" correctly' );
 isnt( Bio::Metadata::Validator::Plugin::Bool->validate( {}      ), 1, '"Bool" invalidates {} correctly' );
 isnt( Bio::Metadata::Validator::Plugin::Bool->validate( 'abc'   ), 1, '"Bool" invalidates "abc" correctly' );
 
