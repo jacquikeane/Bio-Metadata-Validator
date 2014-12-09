@@ -4,13 +4,14 @@ use strict;
 use warnings;
 
 use Test::More;
+use Test::Exception;
 
 my $plugins = [ qw(
   Int
   Str
   Enum
   DateTime
-  Location
+  Ontology
   Bool
 ) ];
 
@@ -50,9 +51,20 @@ isnt( Bio::Metadata::Validator::Plugin::DateTime->validate( '04-12-14' ), 1, '"D
 isnt( Bio::Metadata::Validator::Plugin::DateTime->validate( 'wibble' ), 1, '"DateTime" invalidates "wibble" correctly' );
 
 SKIP: {
-  skip 'skipping slow tests (set $ENV{RUN_SLOW_TESTS} to true to run)', 2 if not defined $ENV{RUN_SLOW_TESTS};
-  is  ( Bio::Metadata::Validator::Plugin::Location->validate( 'GAZ:00444180', { ontology => '/Users/jt6/Downloads/gaz.obo' } ), 1, '"Location" validates "GAZ:00444180" correctly' );
-  isnt( Bio::Metadata::Validator::Plugin::Location->validate( 'GAZ:0044418',  { ontology => '/Users/jt6/Downloads/gaz.obo' } ), 1, '"Location" invalidates "GAZ:0044418" correctly' );
+  skip 'skipping slow tests (set $ENV{RUN_SLOW_TESTS} to true to run)', 2
+    if ( not defined $ENV{RUN_SLOW_TESTS} or not $ENV{RUN_SLOW_TESTS} );
+
+  use Bio::Metadata::Validator;
+  my $v = Bio::Metadata::Validator->new( config_file => 't/data/ontology.conf', project => 'hicf' );
+
+  throws_ok { $v->validate('t/data/ontology.csv') }
+    qr/ invalid rows? in input file/, 'exception when parsing bad ontology CSV';
+
+  like  ( $v->validated_csv->[1], qr/value in field 'envo_term' is not a valid EnvO ontology term/, 'error with bad ontology field' );
+  unlike( $v->validated_csv->[2], qr/value in field 'envo_term' is not a valid EnvO ontology term/, 'no error with valid ontology term' );
+
+  unlike( $v->validated_csv->[3], qr/value in field 'gaz_term' is not a valid Gazetteer ontology term/, 'error with bad ontology field' );
+  like  ( $v->validated_csv->[4], qr/value in field 'gaz_term' is not a valid Gazetteer ontology term/, 'error with bad ontology field' );
 }
 
 is  ( Bio::Metadata::Validator::Plugin::Bool->validate( 1       ), 1, '"Bool" validates 1 correctly' );
