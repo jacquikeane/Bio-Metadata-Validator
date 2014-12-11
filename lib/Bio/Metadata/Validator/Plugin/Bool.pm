@@ -1,4 +1,7 @@
+
 package Bio::Metadata::Validator::Plugin::Bool;
+
+# ABSTRACT: validation plugin for validating booleans
 
 use Moose;
 use namespace::autoclean;

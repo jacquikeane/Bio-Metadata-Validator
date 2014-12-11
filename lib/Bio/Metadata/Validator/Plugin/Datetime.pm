@@ -1,4 +1,7 @@
+
 package Bio::Metadata::Validator::Plugin::DateTime;
+
+# ABSTRACT: validation plugin for validating date/time strings
 
 use Moose;
 use namespace::autoclean;

@@ -1,4 +1,7 @@
+
 package Bio::Metadata::Validator::Plugin::Int;
+
+# ABSTRACT: validation plugin for validating integers
 
 use Moose;
 use namespace::autoclean;

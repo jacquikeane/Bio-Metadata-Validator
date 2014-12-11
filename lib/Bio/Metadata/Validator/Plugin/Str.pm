@@ -1,4 +1,7 @@
+
 package Bio::Metadata::Validator::Plugin::Str;
+
+# ABSTRACT: validation plugin for validating simple strings
 
 use Moose;
 use namespace::autoclean;

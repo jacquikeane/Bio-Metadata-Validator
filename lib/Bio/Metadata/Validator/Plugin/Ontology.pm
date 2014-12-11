@@ -1,4 +1,7 @@
+
 package Bio::Metadata::Validator::Plugin::Ontology;
+
+# ABSTRACT: validation plugin for validating ontology terms
 
 use Moose;
 use namespace::autoclean;
