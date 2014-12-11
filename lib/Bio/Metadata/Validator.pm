@@ -31,7 +31,8 @@ path-help@sanger.ac.uk
 #-------------------------------------------------------------------------------
 
 # public attributes
-has 'config_file'   => ( is => 'ro', isa => 'Str', required => 1 );
+has 'config_file'   => ( is => 'ro', isa => 'Str' );
+has 'config_string' => ( is => 'ro', isa => 'Str' );
 has 'project'       => ( is => 'ro', isa => 'Str', required => 1 );
 has 'validated_csv' => ( is => 'ro', isa => 'ArrayRef[Str]', writer => '_set_validated_csv' );
 
@@ -55,8 +56,14 @@ has 'plugins' => (
 sub BUILD {
   my $self = shift;
 
+  unless ( defined $self->config_file or defined $self->config_string ) {
+    Bio::Metadata::Validator::Exception::NoConfigSpecified->throw(
+      error => 'You must supply either a configuration string or a config file path'
+    );
+  }
+
   # make sure the config file exists
-  unless ( -e $self->config_file ) {
+  if ( defined $self->config_file and not -e $self->config_file ) {
     Bio::Metadata::Validator::Exception::ConfigFileNotFound->throw(
       error => 'Could not find the specified configuration file (' . $self->config_file . ')'
     );
@@ -65,12 +72,18 @@ sub BUILD {
   # load it
   my $cg;
   try {
-    $cg = Config::General->new($self->config_file);
+    if ( defined $self->config_string ) {
+      $cg = Config::General->new( -String => $self->config_string );
+    }
+    else {
+      $cg = Config::General->new( -ConfigFile => $self->config_file );
+    }
   }
-  catch {
-    Bio::Metadata::Validator::Exception::ConfigFileNotValid->throw(
-      error => 'Could not load configuration file (' . $self->config_file . ')'
-    );
+  catch ( $e ) {
+    my $err = defined $self->config_string
+            ? "Could not load configuration from string: $e"
+            : 'Could not load configuration file (' . $self->config_file . "): $e";
+    Bio::Metadata::Validator::Exception::ConfigNotValid->throw( error => $err);
   }
 
   my %config = $cg->getall;
@@ -134,6 +147,9 @@ sub _validate_csv {
       next ROW;
     }
 
+    # skip the empty rows that excel likes to include in CSVs
+    next ROW if $row_string =~ m/^,+[\r\n]*$/;
+
     # the current row should now be a data row, so try parsing it
     my $status = $csv->parse($row_string);
     unless ( $status ) {
@@ -148,8 +164,8 @@ sub _validate_csv {
       $self->_validate_row($csv, \$row_errors);
     }
     catch ( Bio::Metadata::Validator::Exception::NoValidatorPluginForColumnType $e ) {
-      # add the row number (which we don't have in the method) to the error
-      # message and re-throw
+      # add the row number (which we don't have in the _validate_row method) to
+      # the error message and re-throw
       Bio::Metadata::Validator::Exception::NoValidatorPluginForColumnType->throw(
         error => "row $row_num; " . $e->error
       );
@@ -214,9 +230,15 @@ sub _validate_row {
 
     $field_definitions->{$field_name} = $field_definition;
 
-    # skip empty fields (we'll enforce required/optional below)
-    next FIELD if ( not defined $field_value or
-                    $field_value =~ m/^\s*$/ );
+    # check for required/optional and skip empty fields
+    if ( not defined $field_value or
+         $field_value =~ m/^\s*$/ ) {
+      if ( defined $field_definition->{required} and
+           $field_definition->{required} ) {
+        $$row_errors_ref .= " ['$field_name' is a required field]";
+      }
+      next FIELD;
+    }
 
     # look up the expected type for this field in the configuration
     # and get the appropriate plugin
@@ -246,6 +268,7 @@ sub _validate_row {
 
   $self->_validate_if_dependencies( \@row, $row_errors_ref );
   $self->_validate_one_of_dependencies( \@row, $row_errors_ref );
+  $self->_validate_some_of_dependencies( \@row, $row_errors_ref );
 }
 
 #-------------------------------------------------------------------------------
@@ -253,10 +276,17 @@ sub _validate_row {
 sub _validate_if_dependencies {
   my ( $self, $row, $row_errors_ref ) = @_;
 
+  return unless defined $self->_config->{dependencies}->{if};
+
   IF: foreach my $if_col_name ( keys %{ $self->_config->{dependencies}->{if} } ) {
     my $dependency = $self->_config->{dependencies}->{if}->{$if_col_name};
 
     my $field_definition = $self->_field_defs->{$if_col_name};
+    unless ( defined $field_definition ) {
+      Bio::Metadata::Validator::Exception::BadConfig->throw(
+        error => "Can't find field definition for '$if_col_name' (required by 'if' dependency"
+      );
+    }
 
     # make sure that the column which is supposed to be true or false, the
     # "if" column on which the dependency hangs, is itself valid
@@ -271,7 +301,7 @@ sub _validate_if_dependencies {
     # that we've been given...
     if ( not $self->_checked_if_config ) {
       unless ( $field_definition->{type} eq 'Bool' ) {
-        Bio::Metadata::Validator::Exception::WrongFieldTypeInConfig->throw(
+        Bio::Metadata::Validator::Exception::BadConfig->throw(
           error => "Fields with an 'if' dependency must have type Bool ('$if_col_name' field)"
         );
       }
@@ -342,20 +372,42 @@ sub _validate_if_dependencies {
 sub _validate_one_of_dependencies {
   my ( $self, $row, $row_errors_ref ) = @_;
 
-  GROUP: foreach my $oo_group_name ( keys %{ $self->_config->{dependencies}->{one_of} } ) {
-    my $oo_group = $self->_config->{dependencies}->{one_of}->{$oo_group_name};
+  return unless defined $self->_config->{dependencies}->{one_of};
 
+  GROUP: while ( my ( $group_name, $group ) = each %{ $self->_config->{dependencies}->{one_of} } ) {
     my $num_completed_fields = 0;
-    FIELD: foreach my $oo_field_name ( @$oo_group ) {
-      $num_completed_fields++ if $self->_field_values->{$oo_field_name};
+
+    my $group_list = ref $group ? $group : [ $group ];
+    FIELD: foreach my $field_name ( @$group_list ) {
+      $num_completed_fields++ if $self->_field_values->{$field_name};
     }
 
     if ( $num_completed_fields != 1 ) {
-      my $group_fields = join ', ', map { qq('$_') } @$oo_group;
+      my $group_fields = join ', ', map { qq('$_') } @$group_list;
       $$row_errors_ref .= " [exactly one field out of $group_fields should be completed (found $num_completed_fields)]";
     }
+  }
+}
 
-  } # end of "foreach one_of dependency"
+#-------------------------------------------------------------------------------
+
+sub _validate_some_of_dependencies {
+  my ( $self, $row, $row_errors_ref ) = @_;
+
+  return unless defined $self->_config->{dependencies}->{some_of};
+
+  GROUP: while ( my ( $group_name, $group ) = each %{ $self->_config->{dependencies}->{some_of} } ) {
+    my $num_completed_fields = 0;
+
+    my $group_list = ref $group ? $group : [ $group ];
+    FIELD: foreach my $field_name ( @$group_list ) {
+      $num_completed_fields++ if $self->_field_values->{$field_name};
+    }
+    if ( $num_completed_fields < 1 ) {
+      my $group_fields = join ', ', map { qq('$_') } @$group_list;
+      $$row_errors_ref .= " [at least one field out of $group_fields should be completed]";
+    }
+  }
 }
 
 #-------------------------------------------------------------------------------
