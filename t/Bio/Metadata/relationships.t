@@ -15,8 +15,7 @@ throws_ok { $v->validate('t/data/relationships.csv') }
   qr/Fields with an 'if' dependency/, 'exception when validating against bad config ("if" column is not boolean)';
 
 $v = Bio::Metadata::Validator->new( config_file => 't/data/relationships.conf', project => 'hicf' );
-throws_ok { $v->validate('t/data/relationships.csv') }
-  qr/ invalid rows? in input file/, 'exception on broken relationship input file';
+is( $v->validate('t/data/relationships.csv'), 0, 'broken relationship input file marked as invalid' );
 
 like  ( $v->validated_csv->[1],  qr/\[column 1 .*?]$/, 'error with missing value for "if" true' );
 

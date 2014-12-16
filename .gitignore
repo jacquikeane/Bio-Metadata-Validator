@@ -1,9 +1,5 @@
 # tool-specific directories
-.tmp
-.sass-cache
-node_modules/
-bower_components/
-dist/
+.cached_test_files
 
 # vim swap files
 .*.sw?

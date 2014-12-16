@@ -41,8 +41,10 @@ SKIP: {
   skip 'slow tests (set $ENV{RUN_SLOW_TESTS} to true to run)', 1
     if ( not defined $ENV{RUN_SLOW_TESTS} or not $ENV{RUN_SLOW_TESTS} );
 
-  throws_ok { $v->validate('t/data/broken_manifest.csv') }
-    qr/Found 5 invalid rows in input file/, 'exception on broken input file';
+  is( $v->validate('t/data/broken_manifest.csv'), 0, 'broken input file is invalid' );
+
+  my $num_invalid_rows = scalar @{$v->invalid_rows};
+  is( $num_invalid_rows, 5, 'found expected number of invalid rows (5)' );
 
   like  ( $v->validated_csv->[2],  qr/\['raw_data_accession' is a required field]$/, 'required field correctly flagged' );
   like  ( $v->validated_csv->[3],  qr/\[value in field 'raw_data_accession' is not a valid 'raw data accession']$/, 'invalid column type correctly flagged' );
@@ -50,7 +52,7 @@ SKIP: {
   like  ( $v->validated_csv->[5],  qr/\[column 14 should not be completed if the 'host_associated' field is set to true]/, 'correctly flagged presence of both "then" and "else" fields' );
   like  ( $v->validated_csv->[6],  qr/(\[column \d+ must be valid if the 'host_associated' field is set to true]\s*){3}$/, 'columns required through dependency correctly flagged' );
 
-  lives_ok { $v->validate('t/data/working_manifest.csv') } 'no exception with valid input file';
+  ok( $v->validate('t/data/working_manifest.csv'), 'valid input file marked as valid' );
 }
 
 done_testing();

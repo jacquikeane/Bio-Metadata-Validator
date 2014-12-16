@@ -34,6 +34,7 @@ path-help@sanger.ac.uk
 has 'config_file'   => ( is => 'ro', isa => 'Str' );
 has 'config_string' => ( is => 'ro', isa => 'Str' );
 has 'project'       => ( is => 'ro', isa => 'Str', required => 1 );
+has 'invalid_rows'  => ( is => 'ro', isa => 'ArrayRef[Str]', writer => '_set_invalid_rows' );
 has 'validated_csv' => ( is => 'ro', isa => 'ArrayRef[Str]', writer => '_set_validated_csv' );
 
 # private attributes
@@ -133,8 +134,8 @@ sub _validate_csv {
   open my $fh, '<:encoding(utf8)', $self->_file
     or Bio::Metadata::Validator::Exception::UnknownError->throw( error => "Problems reading input CSV file: $!" );
 
-  my @validated_csv    = (); # stores input rows with parse errors prepended
-  my $num_invalid_rows = 0;  # count of invalid rows in the CSV file
+  my @validated_csv    = (); # stores input rows with parse errors appended
+  my @invalid_rows     = (); # stores just the input rows with parse errors
   my $row_num          = 0;  # row counter (used for error messages)
 
   ROW: while ( my $row_string = <$fh> ) {
@@ -153,9 +154,9 @@ sub _validate_csv {
     # the current row should now be a data row, so try parsing it
     my $status = $csv->parse($row_string);
     unless ( $status ) {
-      $num_invalid_rows++;
-      push @validated_csv, '[could not parse row $row_num] $row_string';
-      next ROW;
+      Bio::Metadata::Validator::Exception::InputFileValidationError->throw(
+        error => "Could not parse row $row_num"
+      );
     }
 
     # validate the fields in the row
@@ -174,20 +175,16 @@ sub _validate_csv {
     if ( $row_errors ) {
       $row_string =~ s/[\r\n]//g;
       $row_string .= ",$row_errors\n";
-      $num_invalid_rows++;
+      push @invalid_rows, $row_string;
     }
 
     push @validated_csv, $row_string;
   }
 
+  $self->_set_invalid_rows( \@invalid_rows );
   $self->_set_validated_csv( \@validated_csv );
 
-  if ( $num_invalid_rows ) {
-    Bio::Metadata::Validator::Exception::InputFileValidationError->throw(
-      error      => "Found $num_invalid_rows invalid row" . ( $num_invalid_rows > 1 ? 's' : '' ) . ' in input file',
-      num_errors => $num_invalid_rows
-    );
-  }
+  return scalar @invalid_rows ? 0 : 1;
 }
 
 #-------------------------------------------------------------------------------
