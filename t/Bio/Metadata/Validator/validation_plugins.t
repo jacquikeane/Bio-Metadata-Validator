@@ -1,4 +1,4 @@
-#!env perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
@@ -56,26 +56,26 @@ SKIP: {
 
   diag 'running slow tests';
 
-  use Test::CacheFile;
-  cache( 'http://purl.obolibrary.org/obo/subsets/envo-basic.obo', 'envo-basic.obo' );
-  cache( 'http://purl.obolibrary.org/obo/gaz.obo', 'gaz.obo' );
-  cache( 'http://www.brenda-enzymes.info/ontology/tissue/tree/update/update_files/BrendaTissueOBO', 'bto.obo' );
+  require Test::CacheFile;
+  Test::CacheFile::cache( 'http://purl.obolibrary.org/obo/subsets/envo-basic.obo', 'envo-basic.obo' );
+  Test::CacheFile::cache( 'http://purl.obolibrary.org/obo/gaz.obo', 'gaz.obo' );
+  Test::CacheFile::cache( 'http://www.brenda-enzymes.info/ontology/tissue/tree/update/update_files/BrendaTissueOBO', 'bto.obo' );
 
   use Bio::Metadata::Validator;
-  my $v = Bio::Metadata::Validator->new( config_file => 't/data/ontology.conf', project => 'hicf' );
+  my $v = Bio::Metadata::Validator->new( config_file => 't/data/ontology.conf' );
 
   is( $v->validate('t/data/ontology.csv'), 0, 'file is marked as invalid when parsing CSV bad ontology field' );
 
-  like  ( $v->validated_csv->[1], qr/value in field 'envo_term' is not a valid EnvO ontology term/, 'error with bad ontology field' );
+  like  ( $v->all_rows->[1], qr/value in field 'envo_term' is not a valid EnvO ontology term/, 'error with bad ontology field' );
 
-  unlike( $v->validated_csv->[2], qr/value in field 'envo_term' is not a valid EnvO ontology term/, 'no error with valid EnvO term' );
-  like  ( $v->validated_csv->[3], qr/value in field 'envo_term' is not a valid EnvO ontology term/, 'error with invalid EnvO term' );
+  unlike( $v->all_rows->[2], qr/value in field 'envo_term' is not a valid EnvO ontology term/, 'no error with valid EnvO term' );
+  like  ( $v->all_rows->[3], qr/value in field 'envo_term' is not a valid EnvO ontology term/, 'error with invalid EnvO term' );
 
-  unlike( $v->validated_csv->[4], qr/value in field 'gaz_term' is not a valid Gazetteer ontology term/, 'no error with valid GAZ ontology field' );
-  like  ( $v->validated_csv->[5], qr/value in field 'gaz_term' is not a valid Gazetteer ontology term/, 'error with invalid GAZ ontology field' );
+  unlike( $v->all_rows->[4], qr/value in field 'gaz_term' is not a valid Gazetteer ontology term/, 'no error with valid GAZ ontology field' );
+  like  ( $v->all_rows->[5], qr/value in field 'gaz_term' is not a valid Gazetteer ontology term/, 'error with invalid GAZ ontology field' );
 
-  unlike( $v->validated_csv->[6], qr/value in field 'bto_term' is not a valid BRENDA ontology term/, 'no error with valid BRENDA ontology field' );
-  like  ( $v->validated_csv->[7], qr/value in field 'bto_term' is not a valid BRENDA ontology term/, 'error with invalid BRENDA ontology field' );
+  unlike( $v->all_rows->[6], qr/value in field 'bto_term' is not a valid BRENDA ontology term/, 'no error with valid BRENDA ontology field' );
+  like  ( $v->all_rows->[7], qr/value in field 'bto_term' is not a valid BRENDA ontology term/, 'error with invalid BRENDA ontology field' );
 }
 
 is  ( Bio::Metadata::Validator::Plugin::Bool->validate( 1       ), 1, '"Bool" validates 1 correctly' );

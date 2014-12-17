@@ -8,9 +8,11 @@ use namespace::autoclean;
 use Config::General;
 use TryCatch;
 use Text::CSV;
+use File::Slurp;
+use Digest::MD5 qw( md5_hex );
+use Term::ANSIColor;
 
-with 'MooseX::Getopt',
-     'MooseX::Role::Pluggable';
+with 'MooseX::Role::Pluggable';
 
 use Bio::Metadata::Validator::Exception;
 
@@ -33,23 +35,23 @@ path-help@sanger.ac.uk
 # public attributes
 has 'config_file'   => ( is => 'ro', isa => 'Str' );
 has 'config_string' => ( is => 'ro', isa => 'Str' );
-has 'project'       => ( is => 'ro', isa => 'Str', required => 1 );
+has 'valid'         => ( is => 'rw', isa => 'Bool' );
 has 'invalid_rows'  => ( is => 'ro', isa => 'ArrayRef[Str]', writer => '_set_invalid_rows' );
-has 'validated_csv' => ( is => 'ro', isa => 'ArrayRef[Str]', writer => '_set_validated_csv' );
+has 'all_rows'      => ( is => 'ro', isa => 'ArrayRef[Str]', writer => '_set_validated_csv' );
 
 # private attributes
-has '_config'            => ( is => 'rw', isa => 'HashRef' );
-has '_file'              => ( is => 'rw', isa => 'Str' );
-has '_field_defs'        => ( is => 'rw', isa => 'HashRef' );
-has '_field_values'      => ( is => 'rw', isa => 'HashRef' );
-has '_valid_fields'      => ( is => 'rw', isa => 'HashRef' );
-has '_checked_if_config' => ( is => 'rw', isa => 'Bool', default => 0 );
-has '_checked_eo_config' => ( is => 'rw', isa => 'Bool', default => 0 );
+has '_config'                  => ( is => 'rw', isa => 'HashRef' );
+has '_field_defs'              => ( is => 'rw', isa => 'HashRef' );
+has '_field_values'            => ( is => 'rw', isa => 'HashRef' );
+has '_valid_fields'            => ( is => 'rw', isa => 'HashRef' );
+has '_checked_if_config'       => ( is => 'rw', isa => 'Bool', default => 0 );
+has '_checked_eo_config'       => ( is => 'rw', isa => 'Bool', default => 0 );
+has '_validated_file_checksum' => ( is => 'rw', isa => 'Str',  default => '' );
 
 # field-validation plugins
 has 'plugins' => (
   is  => 'ro',
-  default => sub { [ qw( Str Int Enum DateTime Ontology Bool ) ] }
+  default => sub { [ qw( Str Int Enum DateTime Ontology Bool ) ] },
 );
 
 #---------------------------------------
@@ -57,16 +59,16 @@ has 'plugins' => (
 sub BUILD {
   my $self = shift;
 
-  unless ( defined $self->config_file or defined $self->config_string ) {
+  unless ( $self->config_file or $self->config_string ) {
     Bio::Metadata::Validator::Exception::NoConfigSpecified->throw(
-      error => 'You must supply either a configuration string or a config file path'
+      error => "ERROR: you must supply either a configuration string or a config file path\n"
     );
   }
 
   # make sure the config file exists
   if ( defined $self->config_file and not -e $self->config_file ) {
     Bio::Metadata::Validator::Exception::ConfigFileNotFound->throw(
-      error => 'Could not find the specified configuration file (' . $self->config_file . ')'
+      error => 'ERROR: could not find the specified configuration file (' . $self->config_file . ")\n"
     );
   }
 
@@ -82,18 +84,35 @@ sub BUILD {
   }
   catch ( $e ) {
     my $err = defined $self->config_string
-            ? "Could not load configuration from string: $e"
-            : 'Could not load configuration file (' . $self->config_file . "): $e";
-    Bio::Metadata::Validator::Exception::ConfigNotValid->throw( error => $err);
+            ? "could not load configuration from string"
+            : 'could not load configuration file (' . $self->config_file . ")";
+    Bio::Metadata::Validator::Exception::ConfigNotValid->throw( error => "ERROR: $err: $e\n" );
   }
 
   my %config = $cg->getall;
-  $self->_config( $config{$self->project} );
+  $self->_config( $config{checklist} );
 }
 
 #-------------------------------------------------------------------------------
 #- public methods --------------------------------------------------------------
 #-------------------------------------------------------------------------------
+
+=head1 METHODS
+
+=head2 validate
+
+Takes a single argument, the path to the file to be validated, and returns 1
+if it's valid, 0 otherwise.
+
+This method stores a checksum for the validated file and returns the validation
+status of that file directly if requested, without repeating the validation.
+
+When a file is validated, the object stores two arrays. One contains every row
+from the input file, with error messages appended to each row if it is found
+to be invalid. The second method stores only invalid rows. Use C<all_rows> and
+C<invalid_rows> respectively to retrieve them.
+
+=cut
 
 sub validate {
   my ( $self, $file ) = @_;
@@ -101,19 +120,100 @@ sub validate {
   # check that we can read the input file
   unless ( defined $file ) {
     Bio::Metadata::Validator::Exception::InputFileNotFound->throw(
-      error => 'Must specify a file to validate'
+      error => "ERROR: must specify a file to validate\n"
     );
   }
   unless ( -e $file ) {
     Bio::Metadata::Validator::Exception::InputFileNotFound->throw(
-      error => "Could not find the specified input file ($file)"
+      error => "ERROR: couldn't find the specified input file ($file)\n"
     );
   }
 
-  $self->_file( $file );
+  # see if we've seen it before
+  my $md5 = md5_hex(read_file($file));
 
-  # currently we have only one validator, for CSV files
-  $self->_validate_csv;
+  my $valid;
+  if ( $md5 ne $self->_validated_file_checksum ) {
+    # the checksums don't match, so actually validate the file
+
+    # currently we have only one validator, for CSV files
+    $valid = $self->_validate_csv($file);
+
+    $self->_validated_file_checksum($md5);
+  }
+  else {
+    # the checksums match, so we've already validated this file. See if we've
+    # stored any invalid rows
+    $valid = scalar @{ $self->invalid_rows } ? 0 : 1;
+  }
+
+  $self->valid($valid);
+
+  return $valid;
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 validation_report
+
+Prints a human-readable validation report to STDOUT.
+
+=cut
+
+sub validation_report {
+  my ( $self, $file ) = @_;
+
+  # if a filename is given, pass it to "validate", otherwise see if we've already
+  # validated a file
+  my $valid;
+  if ( $file ) {
+    $self->validate($file);
+  }
+  else {
+    if ( not $self->_validated_file_checksum ) {
+      Bio::Metadata::Validator::Exception::NotValidated->throw(
+        error => "ERROR: nothing validated yet\n"
+      );
+    }
+  }
+
+  if ( $self->valid ) {
+    print "'$file' is ", colored( "valid\n", 'green' );
+  }
+  else {
+    my $num_invalid_rows = scalar @{$self->invalid_rows};
+    print "'$file' is ", colored( "NOT valid", "bold red" )
+          . ". We found $num_invalid_rows invalid rows\n";
+  }
+}
+
+#-------------------------------------------------------------------------------
+
+sub write_validated_file {
+  my ( $self, $output, $write_invalid_rows_only ) = @_;
+
+  unless ( $self->_validated_file_checksum ) {
+    Bio::Metadata::Validator::Exception::NotValidated->throw(
+      error => "ERROR: nothing validated yet\n"
+    );
+  }
+
+  unless ( $output ) {
+    Bio::Metadata::Validator::Exception::NoInputSpecified->throw(
+      error => "no output filename given\n"
+    );
+  }
+
+  open ( FILE, '>', $output )
+    or die "ERROR: couldn't write validated CSV to '$output': $!";
+
+  if ( defined $write_invalid_rows_only and $write_invalid_rows_only ) {
+    print FILE join '', @{ $self->invalid_rows };
+  }
+  else {
+    print FILE join '', @{ $self->all_rows };
+  }
+  close FILE;
 }
 
 #-------------------------------------------------------------------------------
@@ -121,9 +221,12 @@ sub validate {
 #-------------------------------------------------------------------------------
 
 # reads and validates the CSV file. Returns 1 if valid, 0 otherwise
+#
+# arguments: scalar; path to file to validate
+# returns:   scalar; 1 if valid, 0 otherwise
 
 sub _validate_csv {
-  my $self = shift;
+  my ( $self, $file ) = @_;
 
   # the example manifest CSV contains a header row. We want to avoid trying to
   # parse this, so it should be added to the config and we'll pull it in and
@@ -131,8 +234,10 @@ sub _validate_csv {
   my $header = substr( $self->_config->{header_row}, 0, 20 );
 
   my $csv = Text::CSV->new;
-  open my $fh, '<:encoding(utf8)', $self->_file
-    or Bio::Metadata::Validator::Exception::UnknownError->throw( error => "Problems reading input CSV file: $!" );
+  open my $fh, '<:encoding(utf8)', $file
+    or Bio::Metadata::Validator::Exception::UnknownError->throw(
+         error => "ERROR: problems reading input CSV file: $!\n"
+       );
 
   my @validated_csv    = (); # stores input rows with parse errors appended
   my @invalid_rows     = (); # stores just the input rows with parse errors
@@ -155,7 +260,7 @@ sub _validate_csv {
     my $status = $csv->parse($row_string);
     unless ( $status ) {
       Bio::Metadata::Validator::Exception::InputFileValidationError->throw(
-        error => "Could not parse row $row_num"
+        error => "ERROR: could not parse row $row_num\n"
       );
     }
 
@@ -168,7 +273,7 @@ sub _validate_csv {
       # add the row number (which we don't have in the _validate_row method) to
       # the error message and re-throw
       Bio::Metadata::Validator::Exception::NoValidatorPluginForColumnType->throw(
-        error => "row $row_num; " . $e->error
+        error => "ERROR: row $row_num; " . $e->error
       );
     }
 
@@ -189,7 +294,7 @@ sub _validate_csv {
 
 #-------------------------------------------------------------------------------
 
-# walk the fields in the row and validate the fields
+# walks the fields in the row and validates the fields
 #
 # arguments: ref;    Text::CSV object
 # returns:   scalar; validation errors for the row
@@ -243,7 +348,7 @@ sub _validate_row {
 
     if ( not defined $plugin ) {
       Bio::Metadata::Validator::Exception::NoValidatorPluginForColumnType->throw(
-        error => "There is no validation plugin for this column type ($field_type) (column $i)"
+        error => "There is no validation plugin for this column type ($field_type) (column $i)\n"
       );
     }
 
@@ -270,6 +375,12 @@ sub _validate_row {
 
 #-------------------------------------------------------------------------------
 
+# checks that the row meets any specified "if" dependencies
+#
+# arguments: ref;    array containing fields for a given row
+#            ref;    scalar with the raw row string
+# returns:   no return value
+
 sub _validate_if_dependencies {
   my ( $self, $row, $row_errors_ref ) = @_;
 
@@ -281,7 +392,7 @@ sub _validate_if_dependencies {
     my $field_definition = $self->_field_defs->{$if_col_name};
     unless ( defined $field_definition ) {
       Bio::Metadata::Validator::Exception::BadConfig->throw(
-        error => "Can't find field definition for '$if_col_name' (required by 'if' dependency"
+        error => "ERROR: can't find field definition for '$if_col_name' (required by 'if' dependency)\n"
       );
     }
 
@@ -299,7 +410,7 @@ sub _validate_if_dependencies {
     if ( not $self->_checked_if_config ) {
       unless ( $field_definition->{type} eq 'Bool' ) {
         Bio::Metadata::Validator::Exception::BadConfig->throw(
-          error => "Fields with an 'if' dependency must have type Bool ('$if_col_name' field)"
+          error => "ERROR: fields with an 'if' dependency must have type Bool ('$if_col_name' field)\n"
         );
       }
       $self->_checked_if_config(1);
@@ -366,6 +477,12 @@ sub _validate_if_dependencies {
 
 #-------------------------------------------------------------------------------
 
+# checks that the row meets any specified "one_of" dependencies
+#
+# arguments: ref;    array containing fields for a given row
+#            ref;    scalar with the raw row string
+# returns:   no return value
+
 sub _validate_one_of_dependencies {
   my ( $self, $row, $row_errors_ref ) = @_;
 
@@ -387,6 +504,12 @@ sub _validate_one_of_dependencies {
 }
 
 #-------------------------------------------------------------------------------
+
+# checks that the row meets any specified "some_of" dependencies
+#
+# arguments: ref;    array containing fields for a given row
+#            ref;    scalar with the raw row string
+# returns:   no return value
 
 sub _validate_some_of_dependencies {
   my ( $self, $row, $row_errors_ref ) = @_;
