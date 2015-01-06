@@ -1,0 +1,8 @@
+simple,regex,int,top_limit,bottom_limit,bound
+string,invalid,1,7,7,7
+string,1234,a,7,7,7
+string,1234,1,12,7,7
+string,1234,1,7,2,7
+string,1234,1,7,7,2
+string,1234,1,7,7,12
+string,1234,1,7,7,7
