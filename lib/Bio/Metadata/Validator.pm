@@ -22,8 +22,6 @@ Bio::Metadata::Validator
 
 =head1 SYNOPSIS
 
-=head1 METHODS
-
 =head1 CONTACT
 
 path-help@sanger.ac.uk
@@ -182,7 +180,7 @@ sub validation_report {
   }
   else {
     my $num_invalid_rows = scalar @{$self->invalid_rows};
-    print "'$file' is ", colored( "NOT valid", "bold red" )
+    print "'$file' is ", colored( "invalid", "bold red" )
           . ". We found $num_invalid_rows invalid rows\n";
   }
 }

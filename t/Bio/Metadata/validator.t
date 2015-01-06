@@ -50,7 +50,7 @@ is( $v->validate('t/data/broken_manifest.csv'), 0, 'broken input file is invalid
 is( $v->_validated_file_checksum, '4e0ef99335fbb4bd619b551797c976cc', 'checksum set' );
 
 is( $v->valid, 0, '"valid" flag correctly shows 0' );
-stdout_like( sub { $v->validation_report('t/data/broken_manifest.csv') }, qr/NOT valid/, 'report shows broken manifest as invalid' );
+stdout_like( sub { $v->validation_report('t/data/broken_manifest.csv') }, qr/invalid/, 'report shows broken manifest as invalid' );
 stdout_like( sub { $v->validation_report('t/data/broken_manifest.csv') }, qr/found 5 invalid rows/, 'report shows expected number of invalid rows' );
 
 my $num_invalid_rows = scalar @{$v->invalid_rows};
@@ -88,7 +88,7 @@ is( $v->valid, 1, '"valid" flag correctly shows 1' );
 isnt( $v->_validated_file_checksum, '4e0ef99335fbb4bd619b551797c976cc', 'checksum reset' );
 
 stdout_like( sub { $v->validation_report('t/data/working_manifest.csv') },
-  qr/(?<!NOT )valid/, 'report shows valid manifest as valid' );
+  qr/(?<!in)valid/, 'report shows valid manifest as valid' );
 
 # get a new, clean object
 $v = Bio::Metadata::Validator->new( config_file => 't/data/hicf.conf' );

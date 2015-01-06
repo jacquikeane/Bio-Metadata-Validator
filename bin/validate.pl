@@ -6,6 +6,7 @@
 use strict;
 use warnings;
 
+use Carp qw( croak );
 use Getopt::Long::Descriptive;
 use Bio::Metadata::Validator;
 use Term::ANSIColor;
@@ -13,41 +14,48 @@ use Pod::Usage;
 
 my ( $opt, $usage ) = describe_options(
   'validate.pl %o <filename>',
-  [ 'config|c=s',  'path to the configuration file that defines the checklist [required]', ],
-  [ 'output|o=s',  'write the validated CSV file to this file' ],
-  [ 'invalid|i',   'write invalid rows only' ],
+  [ 'config|c=s',       'path to the configuration file that defines the checklist [required]', ],
+  [ 'output|o=s',       'write the validated CSV file to this file' ],
+  [ 'write-invalid|i',  'write invalid rows only' ],
   [],
-  [ 'help|h',      'print usage message' ],
+  [ 'help|h',           'print usage message' ],
 );
 
 pod2usage( { -verbose => 2, -exitval => 0 } )
   if $opt->help;
 
-my $v = Bio::Metadata::Validator->new( config_file => $opt->config || '' );
+unless ( $opt->config ) {
+  print STDERR "ERROR: you must supply a configuration file\n";
+  exit 1;
+}
+
+my $v = Bio::Metadata::Validator->new( config_file => $opt->config );
 
 my $file = shift;
 $v->validate( $file );
 $v->validation_report( $file );
 
 if ( $opt->output ) {
-  $v->write_validated_file( $opt->output, $opt->invalid );
+  $v->write_validated_file( $opt->output, $opt->write_invalid );
+  if ( $opt->write_invalid ) {
+    print "wrote only invalid rows from validated file to '" . $opt->output . "'.\n";
+  }
+  else {
+    print "wrote validated file to '" . $opt->output . "'.\n";
+  }
 }
 
 exit;
 
 __END__
 
-=head1 NAME
-
-validate.pl - validate a manifest against a checklist
-
 =head1 USAGE
 
- validate.pl [--invalid|-i] [--output|-o <output file] -c <configuration file> <input file>
+ validate.pl [--write-invalid|-i] [--output|-o <output file] -c <configuration file> <input file>
 
 =head1 SYNOPSIS
 
- validate.pl -c hicf.conf manifest.csv
+ bash% validate.pl -c hicf.conf manifest.csv
  'manifest.csv' is valid
 
 =head1 DESCRIPTION
@@ -71,9 +79,9 @@ Validate the input file against this configuration file.
 =item --output | -o
 
 Write the validated rows to the specifed output file. Default is to write
-all rows, valid or invalid.
+all rows, both valid and invalid.
 
-=item --invalid | -i
+=item --write-invalid | -i
 
 Write only invalid rows, with error messages appended, to the specified
 output file.
@@ -84,9 +92,9 @@ output file.
 
 See L<Bio::Metadata::Validator> for the guts of the script
 
-=head1 AUTHOR
+=head1 CONTACT
 
-John Tate <jt6@sanger.ac.uk>
+path-help@sanger.ac.uk
 
 =cut
 
