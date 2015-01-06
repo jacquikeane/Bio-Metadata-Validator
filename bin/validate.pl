@@ -17,6 +17,7 @@ my ( $opt, $usage ) = describe_options(
   [ 'config|c=s',       'path to the configuration file that defines the checklist [required]', ],
   [ 'output|o=s',       'write the validated CSV file to this file' ],
   [ 'write-invalid|i',  'write invalid rows only' ],
+  [ 'verbose-errors|v', 'show full field descriptions in validation error messages' ],
   [],
   [ 'help|h',           'print usage message' ],
 );
@@ -31,12 +32,15 @@ unless ( $opt->config ) {
 
 my $v = Bio::Metadata::Validator->new( config_file => $opt->config );
 
+$v->write_invalid(  $opt->write_invalid );
+$v->verbose_errors( $opt->verbose_errors );
+
 my $file = shift;
 $v->validate( $file );
 $v->validation_report( $file );
 
 if ( $opt->output ) {
-  $v->write_validated_file( $opt->output, $opt->write_invalid );
+  $v->write_validated_file( $opt->output );
   if ( $opt->write_invalid ) {
     print "wrote only invalid rows from validated file to '" . $opt->output . "'.\n";
   }

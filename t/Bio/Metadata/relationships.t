@@ -49,7 +49,7 @@ like  ( $v->all_rows->[19], qr/\[at least one field out of 'eighteen'.*?]$/, 'er
 
 # make sure that we're checking for the presence of a value in a field, rather than
 # always a *valid* value
-like  ( $v->all_rows->[20], qr/\[value in field 'twelve' is not a valid Int] \[exactly one field out of 'twelve'.*?found 2/, 'error when two columns in a three-column "one-of" group are found, one valid, one invalid' );
+like  ( $v->all_rows->[20], qr/\[value in field 'twelve' is not valid] \[exactly one field out of 'twelve'.*?found 2/, 'error when two columns in a three-column "one-of" group are found, one valid, one invalid' );
 
 done_testing();
 

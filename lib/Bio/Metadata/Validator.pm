@@ -31,11 +31,13 @@ path-help@sanger.ac.uk
 #-------------------------------------------------------------------------------
 
 # public attributes
-has 'config_file'   => ( is => 'ro', isa => 'Str' );
-has 'config_string' => ( is => 'ro', isa => 'Str' );
-has 'valid'         => ( is => 'rw', isa => 'Bool' );
-has 'invalid_rows'  => ( is => 'ro', isa => 'ArrayRef[Str]', writer => '_set_invalid_rows' );
-has 'all_rows'      => ( is => 'ro', isa => 'ArrayRef[Str]', writer => '_set_validated_csv' );
+has 'config_file'    => ( is => 'ro', isa => 'Str' );
+has 'config_string'  => ( is => 'ro', isa => 'Str' );
+has 'valid'          => ( is => 'rw', isa => 'Bool' );
+has 'write_invalid'  => ( is => 'rw', isa => 'Bool', default => 0 );
+has 'verbose_errors' => ( is => 'rw', isa => 'Bool', default => 0 );
+has 'invalid_rows'   => ( is => 'ro', isa => 'ArrayRef[Str]', writer => '_set_invalid_rows' );
+has 'all_rows'       => ( is => 'ro', isa => 'ArrayRef[Str]', writer => '_set_validated_csv' );
 
 # private attributes
 has '_config'                  => ( is => 'rw', isa => 'HashRef' );
@@ -187,8 +189,22 @@ sub validation_report {
 
 #-------------------------------------------------------------------------------
 
+=head2 write_validated_file
+
+Writes the validated rows to file. Takes a single argument, a scalar containing
+the path of the output file.
+
+If C<invalid_rows> is set to true, only invalid rows will be written to the
+output file. Default is to write all rows, both valid and invalid.
+
+If C<verbose_errors> is set to true, error messages on invalid rows will
+include the full description of the field. The description is taken from the
+configuration file.
+
+=cut
+
 sub write_validated_file {
-  my ( $self, $output, $write_invalid_rows_only ) = @_;
+  my ( $self, $output ) = @_;
 
   unless ( $self->_validated_file_checksum ) {
     Bio::Metadata::Validator::Exception::NotValidated->throw(
@@ -205,7 +221,7 @@ sub write_validated_file {
   open ( FILE, '>', $output )
     or die "ERROR: couldn't write validated CSV to '$output': $!";
 
-  if ( defined $write_invalid_rows_only and $write_invalid_rows_only ) {
+  if ( $self->write_invalid ) {
     print FILE join '', @{ $self->invalid_rows };
   }
   else {
@@ -357,8 +373,13 @@ sub _validate_row {
       $valid_fields->{$field_name} = 1;
     }
     else {
-      my $desc = $field_definition->{description} || $field_type;
-      $$row_errors_ref .= " [value in field '$field_name' is not a valid $desc]";
+      if ( $self->verbose_errors ) {
+        my $desc = $field_definition->{description} || $field_type;
+        $$row_errors_ref .= " [value in field '$field_name' is not valid; field description: '$desc']";
+      }
+      else {
+        $$row_errors_ref .= " [value in field '$field_name' is not valid]";
+      }
     }
   }
 

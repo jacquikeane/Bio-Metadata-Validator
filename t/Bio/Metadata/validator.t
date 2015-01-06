@@ -47,7 +47,7 @@ cache( 'http://www.brenda-enzymes.info/ontology/tissue/tree/update/update_files/
 
 is( $v->validate('t/data/broken_manifest.csv'), 0, 'broken input file is invalid' );
 
-is( $v->_validated_file_checksum, '4e0ef99335fbb4bd619b551797c976cc', 'checksum set' );
+is( $v->_validated_file_checksum, '71b6c7ba3f3dd236a3d48f439bf27673', 'checksum set' );
 
 is( $v->valid, 0, '"valid" flag correctly shows 0' );
 stdout_like( sub { $v->validation_report('t/data/broken_manifest.csv') }, qr/invalid/, 'report shows broken manifest as invalid' );
@@ -56,11 +56,11 @@ stdout_like( sub { $v->validation_report('t/data/broken_manifest.csv') }, qr/fou
 my $num_invalid_rows = scalar @{$v->invalid_rows};
 is( $num_invalid_rows, 5, 'found expected number of invalid rows (5)' );
 
-like( $v->all_rows->[2],  qr/\['raw_data_accession' is a required field]$/, 'required field correctly flagged' );
-like( $v->all_rows->[3],  qr/\[value in field 'raw_data_accession' is not a valid 'raw data accession']$/, 'invalid column type correctly flagged' );
-like( $v->all_rows->[4],  qr/\[at least one field out of 'tax_id'/, '"one_of" dependency correctly flagged' );
-like( $v->all_rows->[5],  qr/\[column 14 should not be completed if the 'host_associated' field is set to true]/, 'correctly flagged presence of both "then" and "else" fields' );
-like( $v->all_rows->[6],  qr/(\[column \d+ must be valid if the 'host_associated' field is set to true]\s*){3}$/, 'columns required through dependency correctly flagged' );
+like( $v->all_rows->[2], qr/\['raw_data_accession' is a required field]$/, 'required field correctly flagged' );
+like( $v->all_rows->[3], qr/\[at least one field out of 'tax_id'/, '"one_of" dependency correctly flagged' );
+like( $v->all_rows->[4], qr/\[column 14 should not be completed if the 'host_associated' field is set to true]/, 'correctly flagged presence of both "then" and "else" fields' );
+like( $v->all_rows->[5], qr/(\[column \d+ must be valid if the 'host_associated' field is set to true]\s*){3}$/, 'columns required through dependency correctly flagged' );
+like( $v->all_rows->[6], qr/\[value in field 'sample_accession' is not valid\]/, 'invalid column flagged without description' );
 
 # check the method to write out the validated rows
 
@@ -73,13 +73,24 @@ is( scalar @all_rows, 8, 'output file has correct number of rows' );
 unlike( $all_rows[1],  qr/\[.*?]$/, 'no error on row 1 of output file' );
 like  ( $all_rows[2],  qr/\['raw_data_accession' is a required field]$/, 'required field correctly flagged in output file' );
 
-# now, write just in valid rows
+# now, write just invalid rows
 my $invalid_rows_fh = File::Temp->new;
-lives_ok { $v->write_validated_file( $all_rows_fh->filename, 1 ) } 'writes validated file ok';
+is( $v->write_invalid, 0, '"write_invalid" starts false' );
+lives_ok { $v->write_invalid(1) } 'no exception when setting "write_invalid" true';
+is( $v->write_invalid, 1, '"write_invalid" set true' );
+lives_ok { $v->write_validated_file( $all_rows_fh->filename ) } 'writes validated file ok';
 
 my @invalid_rows = read_file( $all_rows_fh->filename );
 is( scalar @invalid_rows, 5, 'output file has correct number of invalid rows' );
 like( $invalid_rows[0],  qr/\['raw_data_accession' is a required field]$/, 'required field correctly flagged in output file with invalid rows' );
+
+# check that we see column descriptions when "verbose_errors" is true
+$invalid_rows_fh = File::Temp->new;
+is( $v->verbose_errors, 0, '"write_invalid" starts false' );
+lives_ok { $v->verbose_errors(1) } 'no exception when setting "write_invalid" true';
+is( $v->verbose_errors, 1, '"write_invalid" set true' );
+lives_ok { $v->validate( 't/data/broken_manifest.csv' ) } 'validates file with verbose error flag set true';
+like( $v->all_rows->[6], qr/\[value in field 'sample_accession' is not valid\]/, 'invalid column flagged without description' );
 
 # check everything works with a working config and manifest
 ok( $v->validate('t/data/working_manifest.csv'), 'valid input file marked as valid' );
