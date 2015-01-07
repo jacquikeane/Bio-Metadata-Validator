@@ -418,9 +418,7 @@ sub _validate_if_dependencies {
     # make sure that the column which is supposed to be true or false, the
     # "if" column on which the dependency hangs, is itself valid
     if ( not $self->_valid_fields->{$if_col_name} ) {
-      my $invalid_dependency_col_num = $field_definition->{col_num} + 1;
-      # ( "+ 1" for display purposes)
-      $$row_errors_ref .= "[column $invalid_dependency_col_num must be valid in order to statisfy a dependency]";
+      $$row_errors_ref .= " [field '$if_col_name' must be valid in order to statisfy a dependency]";
       next IF;
     }
 
@@ -457,8 +455,7 @@ sub _validate_if_dependencies {
       # true; check that the "then" columns are valid
       foreach my $then_col_name ( @$thens ) {
         if ( not $self->_valid_fields->{$then_col_name} ) {
-          my $invalid_dependency_col_num = $self->_field_defs->{$then_col_name}->{col_num} + 1;
-          $$row_errors_ref .= " [column $invalid_dependency_col_num must be valid if the '$if_col_name' field is set to true]";
+          $$row_errors_ref .= " [field '$then_col_name' must be valid if field '$if_col_name' is set to true]";
         }
       }
 
@@ -466,8 +463,7 @@ sub _validate_if_dependencies {
       # for a value, not a *valid* value
       foreach my $else_col_name ( @$elses ) {
         if ( $self->_field_values->{$else_col_name} ) {
-          my $i = $self->_field_defs->{$else_col_name}->{col_num} + 1;
-          $$row_errors_ref .= " [column $i should not be completed if the '$if_col_name' field is set to true]";
+          $$row_errors_ref .= " [field '$else_col_name' should not be completed if field '$if_col_name' is set to true]";
         }
       }
 
@@ -477,16 +473,14 @@ sub _validate_if_dependencies {
       # false; check that the "else" columns are valid
       foreach my $else_col_name ( @$elses ) {
         if ( not $self->_valid_fields->{$else_col_name} ) {
-          my $i = $self->_field_defs->{$else_col_name}->{col_num} + 1;
-          $$row_errors_ref .= " [column $i must be valid if the '$if_col_name' field is set to false]";
+          $$row_errors_ref .= " [field '$else_col_name' must be valid if field '$if_col_name' is set to false]";
         }
       }
 
       # shouldn't have any "then" dependencies completed
       foreach my $then_col_name ( @$thens ) {
         if ( $self->_field_values->{$then_col_name} ) {
-          my $i = $self->_field_defs->{$then_col_name}->{col_num} + 1;
-          $$row_errors_ref .= " [column $i should not be completed if the '$if_col_name' field is set to false]";
+          $$row_errors_ref .= " [field '$then_col_name' should not be completed if field '$if_col_name' is set to false]";
         }
       }
 

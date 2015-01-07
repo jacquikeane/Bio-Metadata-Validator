@@ -58,8 +58,8 @@ is( $num_invalid_rows, 5, 'found expected number of invalid rows (5)' );
 
 like( $v->all_rows->[2], qr/\['raw_data_accession' is a required field]$/, 'required field correctly flagged' );
 like( $v->all_rows->[3], qr/\[at least one field out of 'tax_id'/, '"one_of" dependency correctly flagged' );
-like( $v->all_rows->[4], qr/\[column 14 should not be completed if the 'host_associated' field is set to true]/, 'correctly flagged presence of both "then" and "else" fields' );
-like( $v->all_rows->[5], qr/(\[column \d+ must be valid if the 'host_associated' field is set to true]\s*){3}$/, 'columns required through dependency correctly flagged' );
+like( $v->all_rows->[4], qr/\[field 'isolation_source' should not be completed if field 'host_associated' is set to true]/, 'correctly flagged presence of both "then" and "else" fields' );
+like( $v->all_rows->[5], qr/(\[field '\w+' must be valid if field '\w+' is set to true\]\s*){3}$/, 'fields required through dependency correctly flagged' );
 like( $v->all_rows->[6], qr/\[value in field 'sample_accession' is not valid\]/, 'invalid column flagged without description' );
 
 # check the method to write out the validated rows
