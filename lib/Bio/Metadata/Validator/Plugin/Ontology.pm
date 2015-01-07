@@ -6,7 +6,8 @@ package Bio::Metadata::Validator::Plugin::Ontology;
 use Moose;
 use namespace::autoclean;
 
-with 'MooseX::Role::Pluggable::Plugin';
+with 'MooseX::Role::Pluggable::Plugin',
+     'Bio::Metadata::Validator::PluginRole';
 
 # store the ontology terms in a set of hashes
 has '_ontologies' => ( is => 'rw', isa => 'HashRef[Str]', default => sub { {} } );

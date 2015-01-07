@@ -9,7 +9,7 @@ use namespace::autoclean;
 use DateTime::Format::ISO8601;
 use Try::Tiny;
 
-with 'MooseX::Role::Pluggable::Plugin';
+with 'MooseX::Role::Pluggable::Plugin', 'Bio::Metadata::Validator::PluginRole';
 
 sub validate {
   my ( $self, $value ) = @_;
@@ -35,5 +35,4 @@ sub validate {
 __PACKAGE__->meta->make_immutable;
 
 1;
-
 

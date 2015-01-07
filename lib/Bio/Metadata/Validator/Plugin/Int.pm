@@ -6,7 +6,8 @@ package Bio::Metadata::Validator::Plugin::Int;
 use Moose;
 use namespace::autoclean;
 
-with 'MooseX::Role::Pluggable::Plugin';
+with 'MooseX::Role::Pluggable::Plugin',
+     'Bio::Metadata::Validator::PluginRole';
 
 sub validate {
   my ( $self, $value, $field_definition ) = @_;
