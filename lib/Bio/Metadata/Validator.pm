@@ -22,6 +22,22 @@ Bio::Metadata::Validator
 
 =head1 SYNOPSIS
 
+ # create an object, handing in the path to the config file
+ my $v = Bio::Metadata::Validator->new( config_file => 'hicf.conf' );
+
+ # validate the specified input file
+ $v->validate('hicf.csv');
+
+ # display the validation report
+ $v->validation_report
+
+ # write out all validated rows
+ $v->write_validated_file('all_rows.csv');
+
+ # write just the invalid rows
+ $v->write_invalid(1);
+ $v->write_validated_file('invalid_rows.csv');
+
 =head1 CONTACT
 
 path-help@sanger.ac.uk
@@ -31,13 +47,52 @@ path-help@sanger.ac.uk
 #-------------------------------------------------------------------------------
 
 # public attributes
-has 'config_file'    => ( is => 'ro', isa => 'Str' );
-has 'config_string'  => ( is => 'ro', isa => 'Str' );
-has 'valid'          => ( is => 'rw', isa => 'Bool' );
 has 'write_invalid'  => ( is => 'rw', isa => 'Bool', default => 0 );
 has 'verbose_errors' => ( is => 'rw', isa => 'Bool', default => 0 );
+has 'config_file'    => ( is => 'ro', isa => 'Str' );
+has 'config_string'  => ( is => 'ro', isa => 'Str' );
+has 'valid'          => ( is => 'ro', isa => 'Bool',          writer => '_set_valid',          default => 0, );
+has 'validated_file' => ( is => 'ro', isa => 'Str',           writer => '_set_validated_file', default => '' );
 has 'invalid_rows'   => ( is => 'ro', isa => 'ArrayRef[Str]', writer => '_set_invalid_rows' );
 has 'all_rows'       => ( is => 'ro', isa => 'ArrayRef[Str]', writer => '_set_validated_csv' );
+
+=attr write_invalid
+
+flag showing whether C<write_validated_file> should write all or just invalid
+rows to the output file
+
+=attr verbose_errors
+
+flag showing whether error messages in the output file should include field
+descriptions from the checklist configuration
+
+=attr config_file
+
+a configuration file that specifies the checklist. B<Read-only>; specify at
+instantiation
+
+=attr config_string
+
+a configuration string that specifies the checklist. B<Read-only>; specify at
+instantiation
+
+=attr valid
+
+flag showing whether the current input file is valid. B<Read-only>
+
+=attr validated_file
+
+name of the last file that was validated. B<Read-only>
+
+=attr invalid_rows
+
+list of invalid rows from current input file. B<Read-only>
+
+=attr all_rows
+
+list of all rows from current input file. B<Read-only>
+
+=cut
 
 # private attributes
 has '_config'                  => ( is => 'rw', isa => 'HashRef' );
@@ -101,8 +156,8 @@ sub BUILD {
 
 =head2 validate
 
-Takes a single argument, the path to the file to be validated, and returns 1
-if it's valid, 0 otherwise.
+Takes a single argument, the path to the file to be validated. Returns 1 if
+the input file is valid, 0 otherwise.
 
 This method stores a checksum for the validated file and returns the validation
 status of that file directly if requested, without repeating the validation.
@@ -113,6 +168,9 @@ to be invalid. The second method stores only invalid rows. Use C<all_rows> and
 C<invalid_rows> respectively to retrieve them.
 
 =cut
+
+# TODO checksumming the input file probably isn't necessary. If it proves
+# slow when the module is used in anger, it could probably be ditched.
 
 sub validate {
   my ( $self, $file ) = @_;
@@ -147,7 +205,8 @@ sub validate {
     $valid = scalar @{ $self->invalid_rows } ? 0 : 1;
   }
 
-  $self->valid($valid);
+  $self->_set_valid($valid);
+  $self->_set_validated_file($file);
 
   return $valid;
 }
@@ -156,7 +215,17 @@ sub validate {
 
 =head2 validation_report
 
-Prints a human-readable validation report to STDOUT.
+Prints a human-readable validation report to STDOUT. No return value.
+
+If a filename is given as the only argument, that file will be taken as a new
+input file and will be validated before a report is printed to STDOUT.
+
+If no filename is given but an input file has already been validated since
+the object was instantiated, the validation report for that input file will be
+printed.
+
+Throws a C<Bio::Metadata::Validation::Exception::NotValidated> exception if
+no filename is supplied but no file has yet been validated.
 
 =cut
 
@@ -178,11 +247,11 @@ sub validation_report {
   }
 
   if ( $self->valid ) {
-    print "'$file' is ", colored( "valid\n", 'green' );
+    print "'" . $self->validated_file . "' is ", colored( "valid\n", 'green' );
   }
   else {
     my $num_invalid_rows = scalar @{$self->invalid_rows};
-    print "'$file' is ", colored( "invalid", "bold red" )
+    print "'" . $self->validated_file . "' is ", colored( "invalid", "bold red" )
           . ". Found $num_invalid_rows invalid rows\n";
   }
 }
@@ -192,7 +261,7 @@ sub validation_report {
 =head2 write_validated_file
 
 Writes the validated rows to file. Takes a single argument, a scalar containing
-the path of the output file.
+the path of the output file. No return value.
 
 If C<invalid_rows> is set to true, only invalid rows will be written to the
 output file. Default is to write all rows, both valid and invalid.

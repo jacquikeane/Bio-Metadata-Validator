@@ -47,11 +47,12 @@ cache( 'http://www.brenda-enzymes.info/ontology/tissue/tree/update/update_files/
 
 is( $v->validate('t/data/broken_manifest.csv'), 0, 'broken input file is invalid' );
 
+is( $v->validated_file, 't/data/broken_manifest.csv', 'validated filename stored' );
 is( $v->_validated_file_checksum, '71b6c7ba3f3dd236a3d48f439bf27673', 'checksum set' );
 
 is( $v->valid, 0, '"valid" flag correctly shows 0' );
 stdout_like( sub { $v->validation_report('t/data/broken_manifest.csv') }, qr/invalid/, 'report shows broken manifest as invalid' );
-stdout_like( sub { $v->validation_report('t/data/broken_manifest.csv') }, qr/found 5 invalid rows/, 'report shows expected number of invalid rows' );
+stdout_like( sub { $v->validation_report('t/data/broken_manifest.csv') }, qr/Found 5 invalid rows/, 'report shows expected number of invalid rows' );
 
 my $num_invalid_rows = scalar @{$v->invalid_rows};
 is( $num_invalid_rows, 5, 'found expected number of invalid rows (5)' );

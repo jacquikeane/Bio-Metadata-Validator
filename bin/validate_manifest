@@ -49,7 +49,7 @@ $v->verbose_errors( $opt->verbose_errors );
 
 # validate the input and display a report
 my $valid = $v->validate( $file );
-$v->validation_report( $file );
+$v->validation_report;
 
 # if requested, dump out the validated file
 if ( $opt->output ) {
