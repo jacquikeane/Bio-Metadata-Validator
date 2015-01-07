@@ -1,0 +1,152 @@
+#!/usr/bin/env perl
+
+# PODNAME:  validate.pl
+# ABSTRACT: validate an input file against the checklist
+
+use strict;
+use warnings;
+
+use Getopt::Long::Descriptive;
+use Term::ANSIColor;
+use Pod::Usage;
+use Bio::Metadata::Validator;
+
+# define the accepted options
+my ( $opt, $usage ) = describe_options(
+  'validate.pl %o <filename>',
+  [ 'config|c=s',       'path to the configuration file that defines the checklist', ],
+  [ 'output|o=s',       'write the validated CSV file to this file' ],
+  [ 'write-invalid|i',  'write invalid rows only' ],
+  [ 'verbose-errors|v', 'show full field descriptions in validation error messages' ],
+  [ 'help|h',           'print usage message' ],
+);
+
+# show the POD as usage information, if requested
+pod2usage( { -verbose => 2, -exitval => 1 } )
+  if $opt->help;
+
+# show the auto-generated usage text if there's no input file specified
+my $file = shift;
+unless ( defined $file ) {
+  print $usage->text;
+  exit 1;
+}
+
+# take the path to the configuration file either from the options or from an
+# environment variable
+my $config = $opt->config || $ENV{CHECKLIST_CONFIG} || '';
+
+unless ( $config ) {
+  print STDERR "ERROR: you must supply a configuration file\n";
+  exit 1;
+}
+
+# get a validator and configure it according to the script options
+my $v = Bio::Metadata::Validator->new( config_file => $config );
+
+$v->write_invalid(  $opt->write_invalid );
+$v->verbose_errors( $opt->verbose_errors );
+
+# validate the input and display a report
+my $valid = $v->validate( $file );
+$v->validation_report( $file );
+
+# if requested, dump out the validated file
+if ( $opt->output ) {
+  $v->write_validated_file( $opt->output );
+  if ( $opt->write_invalid ) {
+    print "wrote only invalid rows from validated file to '" . $opt->output . "'.\n";
+  }
+  else {
+    print "wrote validated file to '" . $opt->output . "'.\n";
+  }
+}
+
+# if the input file was valid, we exit with status 0, or status 1 otherwise
+exit ( $valid ? 0 : 1 );
+
+__END__
+
+=head1 SYNOPSIS
+
+Validate a manifest:
+
+ shell% validate_manifest -c hicf.conf valid_manifest.csv
+ 'valid_manifest.csv' is valid
+
+Check an invalid file and write the invalid rows to an output file:
+
+ shell% validate_manifest -c hicf.conf -o validated.csv -i invalid_manifest.csv
+ 'invalid_manifest.csv' is invalid. Found 6 invalid rows
+ wrote only invalid rows from validated file to 'validated.csv'.
+
+Specify the configuration file in an environment variable. For bash:
+
+ bash% export CHECKLIST_CONFIG=hicf.conf
+
+or for C-shell:
+
+ csh% setenv CHECKLIST_CONFIG hicf.conf
+
+then
+
+ shell% validate_manifest valid_manifest.csv
+ 'valid_manifest.csv' is valid
+
+=head1 DESCRIPTION
+
+This script validates a sample manifest against a checklist and displays a
+report. The checklist must be defined in a configuration file, which should be
+supplied either using the C<--config> option or by setting the
+C<CHECKLIST_CONFIG> environment variable.
+
+When the C<--output> option is supplied, the validated file will be written to
+the specified output file. If the input file was not valid, invalid rows in the
+output file will have error messages appended to them. Adding the
+C<--write-invalid> option will cause the script to write only invalid rows to
+the output file. The default behaviour is to write both valid and invalid rows
+to the output file.
+
+The script exits with status 0 if the input file was valid. The exit status
+will be 1 if the input file was invalid, or if there was a problem with the
+options or an error was encountered while running.
+
+=head1 OPTIONS
+
+=over 4
+
+=item -h --help
+
+display help text
+
+=item -c --config
+
+configuration file defining the checklist that should be used to validate
+the input file
+
+=item -o --output
+
+write the validated input to the specifed output file. Default is to write
+all rows, both valid and invalid.
+
+=item -i --write-invalid
+
+Write only invalid rows, with error messages appended, to the specified
+output file.
+
+=item <input file>
+
+Input file to be validated.
+
+=back
+
+=head1 SEE ALSO
+
+L<Bio::Metadata::Validator>
+
+=head1 CONTACT
+
+path-help@sanger.ac.uk
+
+=cut
+

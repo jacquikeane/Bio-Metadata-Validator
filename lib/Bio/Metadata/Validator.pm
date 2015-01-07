@@ -183,7 +183,7 @@ sub validation_report {
   else {
     my $num_invalid_rows = scalar @{$self->invalid_rows};
     print "'$file' is ", colored( "invalid", "bold red" )
-          . ". We found $num_invalid_rows invalid rows\n";
+          . ". Found $num_invalid_rows invalid rows\n";
   }
 }
 
