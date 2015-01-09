@@ -1,0 +1,10 @@
+simple_regex,complex_regex
+123,"Tate JG, Other AN, Else SO",
+123,"Tate JG, Other AN, Else SO",
+123,Hyphen-Ated N,
+123,O'Reilly M,
+123,Tate JG,
+123,"Tate JG",
+123,"Tate JG","erythromycin;S;40,tetracyclin;R;50;Peru, piperacillin-tazobactam;R;16"
+123,"Tate JG","#erythromycin;S;40,tetracyclin;R;50;Peru, piperacillin-tazobactam;R;16"
+123,"Tate JG","tetracyclin;S;40,erythromycin;R;50;Peru"
