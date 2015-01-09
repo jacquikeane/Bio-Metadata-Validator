@@ -25,19 +25,20 @@ my ( $opt, $usage ) = describe_options(
 pod2usage( { -verbose => 2, -exitval => 1 } )
   if $opt->help;
 
-# show the auto-generated usage text if there's no input file specified
-my $file = shift;
-unless ( defined $file ) {
+# take the path to the configuration file either from the options or from an
+# environment variable
+my $config = $opt->config || $ENV{CHECKLIST_CONFIG} || '';
+unless ( $config ) {
+  print STDERR "ERROR: you must specify a configuration file\n";
   print $usage->text;
   exit 1;
 }
 
-# take the path to the configuration file either from the options or from an
-# environment variable
-my $config = $opt->config || $ENV{CHECKLIST_CONFIG} || '';
-
-unless ( $config ) {
-  print STDERR "ERROR: you must supply a configuration file\n";
+# show the auto-generated usage text if there's no input file specified
+my $file = shift;
+unless ( defined $file ) {
+  print STDERR "ERROR: you must specify an input file\n";
+  print $usage->text;
   exit 1;
 }
 

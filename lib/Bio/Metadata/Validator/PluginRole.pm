@@ -11,11 +11,15 @@ requires 'validate';
 around 'validate' => sub {
   my $orig = shift;
   my $self = shift;
+  my $value = shift;
 
   # avoid warnings when the value to validate is undef
-  return 0 unless defined $_[0];
+  return 0 unless defined $value;
 
-  $self->$orig(@_);
+  # strip wrapping quotes
+  $value =~ s/^"?(.*?)"?$/$1/;
+
+  $self->$orig($value, @_);
 };
 
 1;

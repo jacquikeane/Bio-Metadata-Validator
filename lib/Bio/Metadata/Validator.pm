@@ -49,6 +49,7 @@ path-help@sanger.ac.uk
 # public attributes
 has 'write_invalid'  => ( is => 'rw', isa => 'Bool', default => 0 );
 has 'verbose_errors' => ( is => 'rw', isa => 'Bool', default => 0 );
+has 'config_name'    => ( is => 'rw', isa => 'Str',  trigger => \&_set_active_config );
 has 'config_file'    => ( is => 'ro', isa => 'Str' );
 has 'config_string'  => ( is => 'ro', isa => 'Str' );
 has 'valid'          => ( is => 'ro', isa => 'Bool',          writer => '_set_valid',          default => 0, );
@@ -65,6 +66,10 @@ rows to the output file
 
 flag showing whether error messages in the output file should include field
 descriptions from the checklist configuration
+
+=attr config_name
+
+the name of the configuration to use; mainly intended for testing.
 
 =attr config_file
 
@@ -95,13 +100,13 @@ list of all rows from current input file. B<Read-only>
 =cut
 
 # private attributes
+has '_full_config'             => ( is => 'rw', isa => 'HashRef' );
 has '_config'                  => ( is => 'rw', isa => 'HashRef' );
 has '_field_defs'              => ( is => 'rw', isa => 'HashRef' );
 has '_field_values'            => ( is => 'rw', isa => 'HashRef' );
 has '_valid_fields'            => ( is => 'rw', isa => 'HashRef' );
 has '_checked_if_config'       => ( is => 'rw', isa => 'Bool', default => 0 );
 has '_checked_eo_config'       => ( is => 'rw', isa => 'Bool', default => 0 );
-has '_validated_file_checksum' => ( is => 'rw', isa => 'Str',  default => '' );
 
 # field-validation plugins
 has 'plugins' => (
@@ -127,7 +132,7 @@ sub BUILD {
     );
   }
 
-  # load it
+  # load the config
   my $cg;
   try {
     if ( defined $self->config_string ) {
@@ -145,7 +150,49 @@ sub BUILD {
   }
 
   my %config = $cg->getall;
-  $self->_config( $config{checklist} );
+
+  # store the full config from the file or string
+  $self->_full_config( \%config );
+
+  # and set the actual config hash that will be used
+  $self->_set_active_config( $self->config_name || '' );
+}
+
+#---------------------------------------
+
+sub _set_active_config {
+  my ( $self, $config_name ) = @_;
+
+  # the first time this method gets called is at instantiation, but if the
+  # configuration hasn't been set, we'll get an error. Only attempt this if
+  # there's a config to choose from
+  return unless $self->_full_config;
+
+  if ( $config_name ) {
+    # we're looking for a configuration section with a specific name
+
+    unless ( exists $self->_full_config->{checklist}->{$config_name} ) {
+      Bio::Metadata::Validator::Exception::ConfigNotValid->throw(
+        error => "ERROR: there is no config named '" . $config_name . "'\n"
+      );
+    }
+
+    $self->_config( $self->_full_config->{checklist}->{$config_name} );
+
+    unless ( defined $self->_config ) {
+      Bio::Metadata::Validator::Exception::ConfigNotValid->throw(
+        error => "ERROR: failed to load config named '" . $config_name . "'\n"
+      );
+    }
+  }
+  else {
+    # get the first config from the hash; this assumes there's only one in
+    # there. If there are multiple configs in the file and the name isn't
+    # specified, which one we choose is undefined
+    my ( $name, $config ) = each( %{ $self->_full_config->{checklist} } );
+
+    $self->_config($config);
+  }
 }
 
 #-------------------------------------------------------------------------------
@@ -159,18 +206,12 @@ sub BUILD {
 Takes a single argument, the path to the file to be validated. Returns 1 if
 the input file is valid, 0 otherwise.
 
-This method stores a checksum for the validated file and returns the validation
-status of that file directly if requested, without repeating the validation.
-
 When a file is validated, the object stores two arrays. One contains every row
 from the input file, with error messages appended to each row if it is found
 to be invalid. The second method stores only invalid rows. Use C<all_rows> and
 C<invalid_rows> respectively to retrieve them.
 
 =cut
-
-# TODO checksumming the input file probably isn't necessary. If it proves
-# slow when the module is used in anger, it could probably be ditched.
 
 sub validate {
   my ( $self, $file ) = @_;
@@ -187,23 +228,8 @@ sub validate {
     );
   }
 
-  # see if we've seen it before
-  my $md5 = md5_hex(read_file($file));
-
-  my $valid;
-  if ( $md5 ne $self->_validated_file_checksum ) {
-    # the checksums don't match, so actually validate the file
-
-    # currently we have only one validator, for CSV files
-    $valid = $self->_validate_csv($file);
-
-    $self->_validated_file_checksum($md5);
-  }
-  else {
-    # the checksums match, so we've already validated this file. See if we've
-    # stored any invalid rows
-    $valid = scalar @{ $self->invalid_rows } ? 0 : 1;
-  }
+  # currently we have only one validator, for CSV files
+  my $valid = $self->_validate_csv($file);
 
   $self->_set_valid($valid);
   $self->_set_validated_file($file);
@@ -239,7 +265,7 @@ sub validation_report {
     $self->validate($file);
   }
   else {
-    if ( not $self->_validated_file_checksum ) {
+    if ( not $self->validated_file ) {
       Bio::Metadata::Validator::Exception::NotValidated->throw(
         error => "ERROR: nothing validated yet\n"
       );
@@ -252,7 +278,8 @@ sub validation_report {
   else {
     my $num_invalid_rows = scalar @{$self->invalid_rows};
     print "'" . $self->validated_file . "' is ", colored( "invalid", "bold red" )
-          . ". Found $num_invalid_rows invalid rows\n";
+          . ". Found $num_invalid_rows invalid row"
+          . ( $num_invalid_rows > 1 ? 's' : '' ) . ".\n";
   }
 }
 
@@ -275,7 +302,7 @@ configuration file.
 sub write_validated_file {
   my ( $self, $output ) = @_;
 
-  unless ( $self->_validated_file_checksum ) {
+  unless ( $self->validated_file ) {
     Bio::Metadata::Validator::Exception::NotValidated->throw(
       error => "ERROR: nothing validated yet\n"
     );
@@ -314,7 +341,7 @@ sub _validate_csv {
   # the example manifest CSV contains a header row. We want to avoid trying to
   # parse this, so it should be added to the config and we'll pull it in and
   # store the first chunk of it for future reference
-  my $header = substr( $self->_config->{header_row}, 0, 20 );
+  my $header = substr( $self->_config->{header_row} || '', 0, 20 );
 
   my $csv = Text::CSV->new;
   open my $fh, '<:encoding(utf8)', $file
@@ -330,8 +357,8 @@ sub _validate_csv {
     $row_num++;
 
     # try to skip the header row, if present, and blank rows
-    if (    $row_string =~ m/^$header/
-         or $row_string =~ m/^\,+$/ ) {
+    if ( $row_num == 1
+        and ( $row_string =~ m/^$header/ or $row_string =~ m/^\,+$/ ) ) {
       push @validated_csv, $row_string;
       next ROW;
     }
@@ -416,11 +443,10 @@ sub _validate_row {
     $field_definitions->{$field_name} = $field_definition;
 
     # check for required/optional and skip empty fields
-    if ( not defined $field_value or
-         $field_value =~ m/^\s*$/ ) {
+    if ( not defined $field_value or $field_value =~ m/^\s*$/ ) {
       if ( defined $field_definition->{required} and
            $field_definition->{required} ) {
-        $$row_errors_ref .= " ['$field_name' is a required field]";
+        $$row_errors_ref .= " [field '$field_name' is a required field]";
       }
       next FIELD;
     }
