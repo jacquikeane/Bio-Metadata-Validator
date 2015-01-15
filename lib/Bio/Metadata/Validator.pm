@@ -1,7 +1,7 @@
 
 package Bio::Metadata::Validator;
 
-# ABSTRACT: module for validating sample metadata according to a configurable checklist
+# ABSTRACT: validate sample metadata according to a configurable checklist
 
 use Moose;
 use namespace::autoclean;
@@ -23,13 +23,21 @@ Bio::Metadata::Validator
 =head1 SYNOPSIS
 
  # create an object, handing in the path to the config file
- my $v = Bio::Metadata::Validator->new( config_file => 'hicf.conf' );
+ my $v = Bio::Metadata::Validator->new( config_file => 'hicf.conf', config_name => 'hicf' );
 
- # validate the specified input file
- $v->validate('hicf.csv');
+ # validate a CSV file
+ $v->validate_csv('hicf.csv');
+
+ # validate a data structure
+ my $data = [
+  [ 1, 2, 3 ],
+  [ 4, 5, 6 ],
+  ...
+ ];
+ $v->validate_rows($data);
 
  # display the validation report
- $v->validation_report
+ $v->print_validation_report
 
 =head1 CONTACT
 
