@@ -376,8 +376,9 @@ sub _validate_csv {
 
     # validate the fields in the row
     my $row_errors = '';
+    my @raw_values = $csv->fields;
     try {
-      $self->_validate_row($csv, \$row_errors);
+      $self->_validate_row(\@raw_values, \$row_errors);
     }
     catch ( Bio::Metadata::Validator::Exception::NoValidatorPluginForColumnType $e ) {
       # add the row number (which we don't have in the _validate_row method) to
@@ -404,14 +405,14 @@ sub _validate_csv {
 
 #-------------------------------------------------------------------------------
 
-# walks the fields in the row and validates the fields
+# walks the fields in the row and validates the values
 #
-# arguments: ref;    Text::CSV object
+# arguments: ref;    list of raw field values
 # returns:   scalar; validation errors for the row
 #            scalar; number of parsing errors
 
 sub _validate_row {
-  my ( $self, $csv, $row_errors_ref ) = @_;
+  my ( $self, $raw_values, $row_errors_ref ) = @_;
 
   # validate all of the fields but keep track of errors in the scalar that
   # was handed in
@@ -427,7 +428,6 @@ sub _validate_row {
 
   my $num_fields = scalar @{ $self->_config->{field} };
 
-  my @row = $csv->fields;
   FIELD: for ( my $i = 0; $i < $num_fields; $i++ ) {
     # retrieve the definition for this particular field, and add in its column
     # number for later
@@ -436,7 +436,7 @@ sub _validate_row {
 
     my $field_name  = $field_definition->{name};
     my $field_type  = $field_definition->{type};
-    my $field_value = $row[$i];
+    my $field_value = $raw_values->[$i];
 
     $field_values->{$field_name} = $field_value;
 
@@ -482,9 +482,9 @@ sub _validate_row {
   $self->_field_values( $field_values );
   $self->_valid_fields( $valid_fields );
 
-  $self->_validate_if_dependencies( \@row, $row_errors_ref );
-  $self->_validate_one_of_dependencies( \@row, $row_errors_ref );
-  $self->_validate_some_of_dependencies( \@row, $row_errors_ref );
+  $self->_validate_if_dependencies( $raw_values, $row_errors_ref );
+  $self->_validate_one_of_dependencies( $raw_values, $row_errors_ref );
+  $self->_validate_some_of_dependencies( $raw_values, $row_errors_ref );
 }
 
 #-------------------------------------------------------------------------------
