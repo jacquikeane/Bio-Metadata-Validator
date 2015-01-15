@@ -9,6 +9,7 @@ use warnings;
 use Getopt::Long::Descriptive;
 use Term::ANSIColor;
 use Pod::Usage;
+use File::Slurp qw( write_file );
 use Bio::Metadata::Validator;
 
 # define the accepted options
@@ -45,20 +46,20 @@ unless ( defined $file ) {
 # get a validator and configure it according to the script options
 my $v = Bio::Metadata::Validator->new( config_file => $config );
 
-$v->write_invalid(  $opt->write_invalid );
 $v->verbose_errors( $opt->verbose_errors );
 
 # validate the input and display a report
-my $valid = $v->validate( $file );
-$v->validation_report;
+my $valid = $v->validate_csv( $file );
+$v->print_validation_report;
 
 # if requested, dump out the validated file
 if ( $opt->output ) {
-  $v->write_validated_file( $opt->output );
   if ( $opt->write_invalid ) {
+    write_file( $opt->output, $v->invalid_rows );
     print "wrote only invalid rows from validated file to '" . $opt->output . "'.\n";
   }
   else {
+    write_file( $opt->output, $v->all_rows );
     print "wrote validated file to '" . $opt->output . "'.\n";
   }
 }
