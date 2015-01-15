@@ -33,7 +33,7 @@ isnt( Bio::Metadata::Validator::Plugin::Int->validate( ''    ), 1, '"Int" invali
 isnt( Bio::Metadata::Validator::Plugin::Int->validate( ' '   ), 1, '"Int" invalidates " " correctly' );
 
 my $v = Bio::Metadata::Validator->new( config_file => 't/data/02_plugins.conf', config_name => 'int' );
-is( $v->validate('t/data/02_int.csv'), 0, 'found invalid Int fields in test CSV' );
+is( $v->validate_csv('t/data/02_int.csv'), 0, 'found invalid Int fields in test CSV' );
 
   like( $v->all_rows->[1], qr/value in field 'int' is not valid/, 'error with field that fails basic test for integer' );
   like( $v->all_rows->[2], qr/value in field 'top_limit' is not valid/, 'error with int > limit' );
@@ -58,7 +58,7 @@ TODO: {
 }
 
 $v->config_name('str');
-is( $v->validate('t/data/02_str.csv'), 0, 'found invalid Str fields in test CSV' );
+is( $v->validate_csv('t/data/02_str.csv'), 0, 'found invalid Str fields in test CSV' );
 
 unlike( $v->all_rows->[1], qr/value in field '.*?' is not valid/, 'no error with quoted multiple names' );
 unlike( $v->all_rows->[2], qr/value in field '.*?' is not valid/, 'no error with double-quoted multiple names' );
@@ -107,7 +107,7 @@ SKIP: {
 
   $v = Bio::Metadata::Validator->new( config_file => 't/data/02_ontology.conf' );
 
-  is( $v->validate('t/data/02_ontology.csv'), 0, 'file is marked as invalid when parsing CSV bad ontology field' );
+  is( $v->validate_csv('t/data/02_ontology.csv'), 0, 'file is marked as invalid when parsing CSV bad ontology field' );
 
   like  ( $v->all_rows->[1], qr/value in field 'envo_term' is not valid/, 'error with bad ontology field' );
 

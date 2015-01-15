@@ -31,13 +31,6 @@ Bio::Metadata::Validator
  # display the validation report
  $v->validation_report
 
- # write out all validated rows
- $v->write_validated_file('all_rows.csv');
-
- # write just the invalid rows
- $v->write_invalid(1);
- $v->write_validated_file('invalid_rows.csv');
-
 =head1 CONTACT
 
 path-help@sanger.ac.uk
@@ -47,20 +40,14 @@ path-help@sanger.ac.uk
 #-------------------------------------------------------------------------------
 
 # public attributes
-has 'write_invalid'  => ( is => 'rw', isa => 'Bool', default => 0 );
 has 'verbose_errors' => ( is => 'rw', isa => 'Bool', default => 0 );
 has 'config_name'    => ( is => 'rw', isa => 'Str',  trigger => \&_set_active_config );
 has 'config_file'    => ( is => 'ro', isa => 'Str' );
 has 'config_string'  => ( is => 'ro', isa => 'Str' );
-has 'valid'          => ( is => 'ro', isa => 'Bool',          writer => '_set_valid',          default => 0, );
-has 'validated_file' => ( is => 'ro', isa => 'Str',           writer => '_set_validated_file', default => '' );
-has 'invalid_rows'   => ( is => 'ro', isa => 'ArrayRef[Str]', writer => '_set_invalid_rows' );
-has 'all_rows'       => ( is => 'ro', isa => 'ArrayRef[Str]', writer => '_set_validated_csv' );
-
-=attr write_invalid
-
-flag showing whether C<write_validated_file> should write all or just invalid
-rows to the output file
+has 'valid'          => ( is => 'ro', isa => 'Bool',     writer => '_set_valid',          default => undef );
+has 'invalid_rows'   => ( is => 'ro', isa => 'ArrayRef', writer => '_set_invalid_rows' );
+has 'all_rows'       => ( is => 'ro', isa => 'ArrayRef', writer => '_set_validated_rows' );
+has 'validated_file' => ( is => 'rw', isa => 'Str',      writer => '_set_validated_file', default => '' );
 
 =attr verbose_errors
 
@@ -85,10 +72,6 @@ instantiation
 
 flag showing whether the current input file is valid. B<Read-only>
 
-=attr validated_file
-
-name of the last file that was validated. B<Read-only>
-
 =attr invalid_rows
 
 list of invalid rows from current input file. B<Read-only>
@@ -97,16 +80,20 @@ list of invalid rows from current input file. B<Read-only>
 
 list of all rows from current input file. B<Read-only>
 
+=attr validated_file
+
+name of the last file to be validated, if any. B<Read-only>
+
 =cut
 
 # private attributes
-has '_full_config'             => ( is => 'rw', isa => 'HashRef' );
-has '_config'                  => ( is => 'rw', isa => 'HashRef' );
-has '_field_defs'              => ( is => 'rw', isa => 'HashRef' );
-has '_field_values'            => ( is => 'rw', isa => 'HashRef' );
-has '_valid_fields'            => ( is => 'rw', isa => 'HashRef' );
-has '_checked_if_config'       => ( is => 'rw', isa => 'Bool', default => 0 );
-has '_checked_eo_config'       => ( is => 'rw', isa => 'Bool', default => 0 );
+has '_full_config'       => ( is => 'rw', isa => 'HashRef' );
+has '_config'            => ( is => 'rw', isa => 'HashRef' );
+has '_field_defs'        => ( is => 'rw', isa => 'HashRef' );
+has '_field_values'      => ( is => 'rw', isa => 'HashRef' );
+has '_valid_fields'      => ( is => 'rw', isa => 'HashRef' );
+has '_checked_if_config' => ( is => 'rw', isa => 'Bool', default => 0 );
+has '_checked_eo_config' => ( is => 'rw', isa => 'Bool', default => 0 );
 
 # field-validation plugins
 has 'plugins' => (
@@ -201,19 +188,19 @@ sub _set_active_config {
 
 =head1 METHODS
 
-=head2 validate
+=head2 validate_csv
 
-Takes a single argument, the path to the file to be validated. Returns 1 if
+Takes a single argument, the path to the CSV file to be validated. Returns 1 if
 the input file is valid, 0 otherwise.
 
 When a file is validated, the object stores two arrays. One contains every row
 from the input file, with error messages appended to each row if it is found
-to be invalid. The second method stores only invalid rows. Use C<all_rows> and
-C<invalid_rows> respectively to retrieve them.
+to be invalid. The second array stores only invalid rows. Retrieve them with
+C<all_rows> and C<invalid_rows> respectively.
 
 =cut
 
-sub validate {
+sub validate_csv {
   my ( $self, $file ) = @_;
 
   # check that we can read the input file
@@ -228,116 +215,6 @@ sub validate {
     );
   }
 
-  # currently we have only one validator, for CSV files
-  my $valid = $self->_validate_csv($file);
-
-  $self->_set_valid($valid);
-  $self->_set_validated_file($file);
-
-  return $valid;
-}
-
-#-------------------------------------------------------------------------------
-
-=head2 validation_report
-
-Prints a human-readable validation report to STDOUT. No return value.
-
-If a filename is given as the only argument, that file will be taken as a new
-input file and will be validated before a report is printed to STDOUT.
-
-If no filename is given but an input file has already been validated since
-the object was instantiated, the validation report for that input file will be
-printed.
-
-Throws a C<Bio::Metadata::Validation::Exception::NotValidated> exception if
-no filename is supplied but no file has yet been validated.
-
-=cut
-
-sub validation_report {
-  my ( $self, $file ) = @_;
-
-  # if a filename is given, pass it to "validate", otherwise see if we've already
-  # validated a file
-  my $valid;
-  if ( $file ) {
-    $self->validate($file);
-  }
-  else {
-    if ( not $self->validated_file ) {
-      Bio::Metadata::Validator::Exception::NotValidated->throw(
-        error => "ERROR: nothing validated yet\n"
-      );
-    }
-  }
-
-  if ( $self->valid ) {
-    print "'" . $self->validated_file . "' is ", colored( "valid\n", 'green' );
-  }
-  else {
-    my $num_invalid_rows = scalar @{$self->invalid_rows};
-    print "'" . $self->validated_file . "' is ", colored( "invalid", "bold red" )
-          . ". Found $num_invalid_rows invalid row"
-          . ( $num_invalid_rows > 1 ? 's' : '' ) . ".\n";
-  }
-}
-
-#-------------------------------------------------------------------------------
-
-=head2 write_validated_file
-
-Writes the validated rows to file. Takes a single argument, a scalar containing
-the path of the output file. No return value.
-
-If C<invalid_rows> is set to true, only invalid rows will be written to the
-output file. Default is to write all rows, both valid and invalid.
-
-If C<verbose_errors> is set to true, error messages on invalid rows will
-include the full description of the field. The description is taken from the
-configuration file.
-
-=cut
-
-sub write_validated_file {
-  my ( $self, $output ) = @_;
-
-  unless ( $self->validated_file ) {
-    Bio::Metadata::Validator::Exception::NotValidated->throw(
-      error => "ERROR: nothing validated yet\n"
-    );
-  }
-
-  unless ( $output ) {
-    Bio::Metadata::Validator::Exception::NoInputSpecified->throw(
-      error => "no output filename given\n"
-    );
-  }
-
-  open ( FILE, '>', $output )
-    or die "ERROR: couldn't write validated CSV to '$output': $!";
-
-  if ( $self->write_invalid ) {
-    print FILE join '', @{ $self->invalid_rows };
-  }
-  else {
-    print FILE join '', @{ $self->all_rows };
-  }
-  close FILE;
-}
-
-#-------------------------------------------------------------------------------
-#- private methods -------------------------------------------------------------
-#-------------------------------------------------------------------------------
-
-# reads and validates the CSV file. Returns 1 if valid, 0 otherwise
-#
-# arguments: scalar; path to file to validate
-# returns:   scalar; 1 if valid, 0 otherwise
-
-sub _validate_csv {
-  my ( $self, $file ) = @_;
-
   # the example manifest CSV contains a header row. We want to avoid trying to
   # parse this, so it should be added to the config and we'll pull it in and
   # store the first chunk of it for future reference
@@ -349,16 +226,15 @@ sub _validate_csv {
          error => "ERROR: problems reading input CSV file: $!\n"
        );
 
-  my @validated_csv    = (); # stores input rows with parse errors appended
-  my @invalid_rows     = (); # stores just the input rows with parse errors
-  my $row_num          = 0;  # row counter (used for error messages)
+  my @validated_csv = (); # stores input rows with parse errors appended
+  my @invalid_rows  = (); # stores just the input rows with parse errors
+  my $row_num       = 0;  # row counter (used for error messages)
 
   ROW: while ( my $row_string = <$fh> ) {
     $row_num++;
 
     # try to skip the header row, if present, and blank rows
-    if ( $row_num == 1
-        and ( $row_string =~ m/^$header/ or $row_string =~ m/^\,+$/ ) ) {
+    if ( $row_num == 1 and ( $row_string =~ m/^$header/ or $row_string =~ m/^\,+$/ ) ) {
       push @validated_csv, $row_string;
       next ROW;
     }
@@ -390,26 +266,111 @@ sub _validate_csv {
 
     if ( $row_errors ) {
       $row_string =~ s/[\r\n]//g;
-      $row_string .= ",$row_errors\n";
+      $row_string .= ", $row_errors\n";
       push @invalid_rows, $row_string;
     }
 
     push @validated_csv, $row_string;
   }
 
-  $self->_set_invalid_rows( \@invalid_rows );
-  $self->_set_validated_csv( \@validated_csv );
+  my $valid = scalar @invalid_rows ? 0 : 1;
 
-  return scalar @invalid_rows ? 0 : 1;
+  $self->_set_valid( $valid );
+  $self->_set_validated_file( $file );
+  $self->_set_validated_rows( \@validated_csv );
+  $self->_set_invalid_rows( \@invalid_rows );
+
+  return $valid;
 }
 
 #-------------------------------------------------------------------------------
 
-# walks the fields in the row and validates the values
+=head2 print_validation_report
+
+Prints a human-readable validation report to STDOUT. No return value.
+
+Throws a C<Bio::Metadata::Validation::Exception::NotValidated> exception if no
+data have yet been validated.
+
+=cut
+
+sub print_validation_report {
+  my ( $self, $file ) = @_;
+
+  unless ( defined $self->valid ) {
+    Bio::Metadata::Validator::Exception::NotValidated->throw(
+      error => "ERROR: nothing validated yet\n"
+    );
+  }
+
+  my $validated_file = $self->validated_file
+                     ? "'" . $self->validated_file . "' is "
+                     : 'input data are ';
+  if ( $self->valid ) {
+    print $validated_file, colored( "valid\n", 'green' );
+  }
+  else {
+    my $num_invalid_rows = scalar @{$self->invalid_rows};
+    print $validated_file, colored( "invalid", "bold red" )
+          . ". Found $num_invalid_rows invalid row"
+          . ( $num_invalid_rows > 1 ? 's' : '' ) . ".\n";
+  }
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 validate_rows
+
+=cut
+
+sub validate_rows {
+  my ( $self, $rows ) = @_;
+
+  # clear out any old filenames
+  $self->_set_validated_file( '' );
+
+  my @validated_rows = (); # stores input rows with parse errors appended
+  my @invalid_rows   = (); # stores just the input rows with parse errors
+  my $row_num        = 0;  # row counter (used for error messages)
+
+  ROW: foreach my $row_values ( @$rows ) {
+    $row_num++;
+
+    # validate the fields in the row
+    my $row_errors = '';
+    try {
+      $self->_validate_row($row_values, \$row_errors);
+    }
+    catch ( Bio::Metadata::Validator::Exception::NoValidatorPluginForColumnType $e ) {
+      # add the row number (which we don't have in the _validate_row method) to
+      # the error message and re-throw
+      Bio::Metadata::Validator::Exception::NoValidatorPluginForColumnType->throw(
+        error => "ERROR: row $row_num; " . $e->error
+      );
+    }
+
+    push @validated_rows, [ @$row_values ];
+    push @invalid_rows, [ @$row_values, $row_errors ] if $row_errors;
+  }
+
+  my $valid = scalar @invalid_rows ? 0 : 1;
+
+  $self->_set_valid( $valid );
+  $self->_set_validated_rows( \@validated_rows );
+  $self->_set_invalid_rows( \@invalid_rows );
+
+  return $valid;
+}
+
+#-------------------------------------------------------------------------------
+#- private methods -------------------------------------------------------------
+#-------------------------------------------------------------------------------
+
+# takes a reference to an array containing the field values to be validated.
+# Walks the fields in the row and validates the values
 #
-# arguments: ref;    list of raw field values
-# returns:   scalar; validation errors for the row
-#            scalar; number of parsing errors
+# arguments: ref; list of raw field values
+#            ref; scalar to hold errors for this row
 
 sub _validate_row {
   my ( $self, $raw_values, $row_errors_ref ) = @_;
@@ -446,7 +407,7 @@ sub _validate_row {
     if ( not defined $field_value or $field_value =~ m/^\s*$/ ) {
       if ( defined $field_definition->{required} and
            $field_definition->{required} ) {
-        $$row_errors_ref .= " [field '$field_name' is a required field]";
+        $$row_errors_ref .= "[field '$field_name' is a required field] ";
       }
       next FIELD;
     }
@@ -470,10 +431,10 @@ sub _validate_row {
     else {
       if ( $self->verbose_errors ) {
         my $desc = $field_definition->{description} || $field_type;
-        $$row_errors_ref .= " [value in field '$field_name' is not valid; field description: '$desc']";
+        $$row_errors_ref .= "[value in field '$field_name' is not valid; field description: '$desc'] ";
       }
       else {
-        $$row_errors_ref .= " [value in field '$field_name' is not valid]";
+        $$row_errors_ref .= "[value in field '$field_name' is not valid] ";
       }
     }
   }
