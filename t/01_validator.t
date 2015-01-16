@@ -15,34 +15,33 @@ use_ok('Bio::Metadata::Validator');
 # check the configuration file/string
 
 throws_ok { Bio::Metadata::Validator->new() }
-  qr/you must supply either /, 'exception on missing configuration';
-
-my $nef = "non-existent-file-$$";
-throws_ok { Bio::Metadata::Validator->new( config_file => $nef ) }
-  qr/could not find the specified configuration file/, 'exception on missing config file';
+  qr/Attribute \(config_file\) is required /, 'exception on missing configuration file';
 
 throws_ok { Bio::Metadata::Validator->new( config_file => 't/data/01_broken.conf' ) }
-  qr/could not load configuration file/, 'exception on invalid config file';
+  qr/Attribute \(config_name\) is required /, 'exception on missing configuration name';
 
-my $config = read_file('t/data/01_broken.conf');
-throws_ok { Bio::Metadata::Validator->new( config_string => $config ) }
-  qr/could not load configuration from string/, 'exception on invalid config string';
+my $nef = "non-existent-file-$$";
+throws_ok { Bio::Metadata::Validator->new( config_file => $nef, config_name => 'dummy' ) }
+  qr/could not find the specified configuration file/, 'exception on missing config file';
+
+throws_ok { Bio::Metadata::Validator->new( config_file => 't/data/01_broken.conf', config_name => 'broken' ) }
+  qr/could not load configuration file/, 'exception on invalid config file';
 
 # finally, load a valid configuration file
 
 # start with a single config
 my $v;
-lives_ok { $v = Bio::Metadata::Validator->new( config_file => 't/data/01_single.conf' ) }
+lives_ok { $v = Bio::Metadata::Validator->new( config_file => 't/data/01_single.conf', config_name => 'one' ) }
   'no exception with config file with a single config';
-is( $v->_config->{field}->[0]->{type}, 'Bool', 'specified config sets correct type (Bool) for field' );
+is( $v->config->{field}->[0]->{type}, 'Bool', 'specified config sets correct type (Bool) for field' );
 
 # and one with multiple configs
 lives_ok { $v = Bio::Metadata::Validator->new( config_file => 't/data/01_multiple.conf', config_name => 'one' ) }
   'no exception with config file with multiple configs';
-is( $v->_config->{field}->[0]->{type}, 'Str', 'specified config sets correct type (Str) for field' );
+is( $v->config->{field}->[0]->{type}, 'Str', 'specified config sets correct type (Str) for field' );
 
 lives_ok { $v->config_name('two') } 'no exception when changing active config';
-is( $v->_config->{field}->[0]->{type}, 'Int', 'new active config sets correct type (Int) for field' );
+is( $v->config->{field}->[0]->{type}, 'Int', 'new active config sets correct type (Int) for field' );
 
 # validating input CSV files
 
@@ -57,7 +56,7 @@ throws_ok { $v->print_validation_report } qr/nothing validated yet/,
 throws_ok { $v->validate_csv($nef) }
   qr/couldn't find the specified input file/, 'exception on missing input file';
 
-$v = Bio::Metadata::Validator->new( config_file => 't/data/01_single.conf' );
+$v = Bio::Metadata::Validator->new( config_file => 't/data/01_single.conf', config_name => 'one' );
 
 is( $v->validate_csv('t/data/01_broken_manifest.csv'), 0, 'broken input file is invalid' );
 

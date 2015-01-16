@@ -5,14 +5,14 @@ package Bio::Metadata::Validator;
 
 use Moose;
 use namespace::autoclean;
-use Config::General;
 use TryCatch;
 use Text::CSV;
 use File::Slurp;
 use Digest::MD5 qw( md5_hex );
 use Term::ANSIColor;
 
-with 'MooseX::Role::Pluggable';
+with 'MooseX::Role::Pluggable',
+     'Bio::Metadata::ConfigRole';
 
 use Bio::Metadata::Validator::Exception;
 
@@ -49,9 +49,6 @@ path-help@sanger.ac.uk
 
 # public attributes
 has 'verbose_errors' => ( is => 'rw', isa => 'Bool', default => 0 );
-has 'config_name'    => ( is => 'rw', isa => 'Str',  trigger => \&_set_active_config );
-has 'config_file'    => ( is => 'ro', isa => 'Str' );
-has 'config_string'  => ( is => 'ro', isa => 'Str' );
 has 'valid'          => ( is => 'ro', isa => 'Bool',     writer => '_set_valid',          default => undef );
 has 'invalid_rows'   => ( is => 'ro', isa => 'ArrayRef', writer => '_set_invalid_rows' );
 has 'all_rows'       => ( is => 'ro', isa => 'ArrayRef', writer => '_set_validated_rows' );
@@ -61,20 +58,6 @@ has 'validated_file' => ( is => 'rw', isa => 'Str',      writer => '_set_validat
 
 flag showing whether error messages in the output file should include field
 descriptions from the checklist configuration
-
-=attr config_name
-
-the name of the configuration to use; mainly intended for testing.
-
-=attr config_file
-
-a configuration file that specifies the checklist. B<Read-only>; specify at
-instantiation
-
-=attr config_string
-
-a configuration string that specifies the checklist. B<Read-only>; specify at
-instantiation
 
 =attr valid
 
@@ -95,8 +78,6 @@ name of the last file to be validated, if any. B<Read-only>
 =cut
 
 # private attributes
-has '_full_config'       => ( is => 'rw', isa => 'HashRef' );
-has '_config'            => ( is => 'rw', isa => 'HashRef' );
 has '_field_defs'        => ( is => 'rw', isa => 'HashRef' );
 has '_field_values'      => ( is => 'rw', isa => 'HashRef' );
 has '_valid_fields'      => ( is => 'rw', isa => 'HashRef' );
@@ -108,87 +89,6 @@ has 'plugins' => (
   is  => 'ro',
   default => sub { [ qw( Str Int Enum DateTime Ontology Bool ) ] },
 );
-
-#---------------------------------------
-
-sub BUILD {
-  my $self = shift;
-
-  unless ( $self->config_file or $self->config_string ) {
-    Bio::Metadata::Validator::Exception::NoConfigSpecified->throw(
-      error => "ERROR: you must supply either a configuration string or a config file path\n"
-    );
-  }
-
-  # make sure the config file exists
-  if ( defined $self->config_file and not -e $self->config_file ) {
-    Bio::Metadata::Validator::Exception::ConfigFileNotFound->throw(
-      error => 'ERROR: could not find the specified configuration file (' . $self->config_file . ")\n"
-    );
-  }
-
-  # load the config
-  my $cg;
-  try {
-    if ( defined $self->config_string ) {
-      $cg = Config::General->new( -String => $self->config_string );
-    }
-    else {
-      $cg = Config::General->new( -ConfigFile => $self->config_file );
-    }
-  }
-  catch ( $e ) {
-    my $err = defined $self->config_string
-            ? "could not load configuration from string"
-            : 'could not load configuration file (' . $self->config_file . ")";
-    Bio::Metadata::Validator::Exception::ConfigNotValid->throw( error => "ERROR: $err: $e\n" );
-  }
-
-  my %config = $cg->getall;
-
-  # store the full config from the file or string
-  $self->_full_config( \%config );
-
-  # and set the actual config hash that will be used
-  $self->_set_active_config( $self->config_name || '' );
-}
-
-#---------------------------------------
-
-sub _set_active_config {
-  my ( $self, $config_name ) = @_;
-
-  # the first time this method gets called is at instantiation, but if the
-  # configuration hasn't been set, we'll get an error. Only attempt this if
-  # there's a config to choose from
-  return unless $self->_full_config;
-
-  if ( $config_name ) {
-    # we're looking for a configuration section with a specific name
-
-    unless ( exists $self->_full_config->{checklist}->{$config_name} ) {
-      Bio::Metadata::Validator::Exception::ConfigNotValid->throw(
-        error => "ERROR: there is no config named '" . $config_name . "'\n"
-      );
-    }
-
-    $self->_config( $self->_full_config->{checklist}->{$config_name} );
-
-    unless ( defined $self->_config ) {
-      Bio::Metadata::Validator::Exception::ConfigNotValid->throw(
-        error => "ERROR: failed to load config named '" . $config_name . "'\n"
-      );
-    }
-  }
-  else {
-    # get the first config from the hash; this assumes there's only one in
-    # there. If there are multiple configs in the file and the name isn't
-    # specified, which one we choose is undefined
-    my ( $name, $config ) = each( %{ $self->_full_config->{checklist} } );
-
-    $self->_config($config);
-  }
-}
 
 #-------------------------------------------------------------------------------
 #- public methods --------------------------------------------------------------
@@ -226,7 +126,7 @@ sub validate_csv {
   # the example manifest CSV contains a header row. We want to avoid trying to
   # parse this, so it should be added to the config and we'll pull it in and
   # store the first chunk of it for future reference
-  my $header = substr( $self->_config->{header_row} || '', 0, 20 );
+  my $header = substr( $self->config->{header_row} || '', 0, 20 );
 
   my $csv = Text::CSV->new;
   open my $fh, '<:encoding(utf8)', $file
@@ -395,12 +295,12 @@ sub _validate_row {
   # keep track of the field definitions, hashed by field name
   my $field_definitions = {};
 
-  my $num_fields = scalar @{ $self->_config->{field} };
+  my $num_fields = scalar @{ $self->config->{field} };
 
   FIELD: for ( my $i = 0; $i < $num_fields; $i++ ) {
     # retrieve the definition for this particular field, and add in its column
     # number for later
-    my $field_definition = $self->_config->{field}->[$i];
+    my $field_definition = $self->config->{field}->[$i];
     $field_definition->{col_num} = $i;
 
     my $field_name  = $field_definition->{name};
@@ -467,10 +367,10 @@ sub _validate_row {
 sub _validate_if_dependencies {
   my ( $self, $row, $row_errors_ref ) = @_;
 
-  return unless defined $self->_config->{dependencies}->{if};
+  return unless defined $self->config->{dependencies}->{if};
 
-  IF: foreach my $if_col_name ( keys %{ $self->_config->{dependencies}->{if} } ) {
-    my $dependency = $self->_config->{dependencies}->{if}->{$if_col_name};
+  IF: foreach my $if_col_name ( keys %{ $self->config->{dependencies}->{if} } ) {
+    my $dependency = $self->config->{dependencies}->{if}->{$if_col_name};
 
     my $field_definition = $self->_field_defs->{$if_col_name};
     unless ( defined $field_definition ) {
@@ -563,9 +463,9 @@ sub _validate_if_dependencies {
 sub _validate_one_of_dependencies {
   my ( $self, $row, $row_errors_ref ) = @_;
 
-  return unless defined $self->_config->{dependencies}->{one_of};
+  return unless defined $self->config->{dependencies}->{one_of};
 
-  GROUP: while ( my ( $group_name, $group ) = each %{ $self->_config->{dependencies}->{one_of} } ) {
+  GROUP: while ( my ( $group_name, $group ) = each %{ $self->config->{dependencies}->{one_of} } ) {
     my $num_completed_fields = 0;
 
     my $group_list = ref $group ? $group : [ $group ];
@@ -591,9 +491,9 @@ sub _validate_one_of_dependencies {
 sub _validate_some_of_dependencies {
   my ( $self, $row, $row_errors_ref ) = @_;
 
-  return unless defined $self->_config->{dependencies}->{some_of};
+  return unless defined $self->config->{dependencies}->{some_of};
 
-  GROUP: while ( my ( $group_name, $group ) = each %{ $self->_config->{dependencies}->{some_of} } ) {
+  GROUP: while ( my ( $group_name, $group ) = each %{ $self->config->{dependencies}->{some_of} } ) {
     my $num_completed_fields = 0;
 
     my $group_list = ref $group ? $group : [ $group ];
