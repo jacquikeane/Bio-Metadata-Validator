@@ -17,9 +17,6 @@ use_ok('Bio::Metadata::Validator');
 throws_ok { Bio::Metadata::Validator->new() }
   qr/Attribute \(config_file\) is required /, 'exception on missing configuration file';
 
-throws_ok { Bio::Metadata::Validator->new( config_file => 't/data/01_broken.conf' ) }
-  qr/Attribute \(config_name\) is required /, 'exception on missing configuration name';
-
 my $nef = "non-existent-file-$$";
 throws_ok { Bio::Metadata::Validator->new( config_file => $nef, config_name => 'dummy' ) }
   qr/could not find the specified configuration file/, 'exception on missing config file';
@@ -34,6 +31,12 @@ my $v;
 lives_ok { $v = Bio::Metadata::Validator->new( config_file => 't/data/01_single.conf', config_name => 'one' ) }
   'no exception with config file with a single config';
 is( $v->config->{field}->[0]->{type}, 'Bool', 'specified config sets correct type (Bool) for field' );
+
+# specify a config but not a name
+lives_ok { $v = Bio::Metadata::Validator->new( config_file => 't/data/01_single.conf' ) }
+  'no exception on instantiating with a config file but no name';
+
+is( $v->config->{field}->[0]->{name}, 'one', 'config loaded' );
 
 # and one with multiple configs
 lives_ok { $v = Bio::Metadata::Validator->new( config_file => 't/data/01_multiple.conf', config_name => 'one' ) }

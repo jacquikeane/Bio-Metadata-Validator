@@ -31,7 +31,6 @@ has 'config_file'  => (
 has 'config_name' => (
   is       => 'rw',
   isa      => 'Str',
-  required => 1,
   trigger  => \&_set_config_name,
 );
 
@@ -76,7 +75,7 @@ sub _set_config_file {
     $cg = Config::General->new( -ConfigFile => $self->config_file );
   }
   catch ( $e ) {
-    die 'ERROR: could not load configuration file (' . $self->config_file . '): $!';
+    die 'ERROR: could not load configuration file (' . $self->config_file . "): $e";
   }
 
   my %config = $cg->getall;
@@ -84,11 +83,16 @@ sub _set_config_file {
   # store the full config from the file or string
   $self->_full_config( \%config );
 
-  # we're looking for a configuration section with a specific name
-  die "ERROR: there is no config named '" . $self->config_name . "'\n"
-    unless exists $self->_full_config->{checklist}->{$self->config_name};
-
-  $self->_set_config( $self->_full_config->{checklist}->{$self->config_name} );
+  if ( defined $self->config_name and
+       exists $self->_full_config->{checklist}->{$self->config_name} ) {
+    # we're looking for a configuration section with a specific name
+    $self->_set_config( $self->_full_config->{checklist}->{$self->config_name} );
+  }
+  else {
+    # load any config from the file
+    my ( $name, $config ) = each %{ $self->_full_config->{checklist} };
+    $self->_set_config($config);
+  }
 }
 
 #---------------------------------------
