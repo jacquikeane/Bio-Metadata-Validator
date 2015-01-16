@@ -11,10 +11,11 @@ use File::Slurp;
 use Digest::MD5 qw( md5_hex );
 use Term::ANSIColor;
 
-with 'MooseX::Role::Pluggable',
-     'Bio::Metadata::ConfigRole';
+with 'MooseX::Role::Pluggable';
 
-use Bio::Metadata::Validator::Exception;
+use Bio::Metadata::Reader;
+use Bio::Metadata::Config;
+use Bio::Metadata::Manifest;
 
 =head1 NAME
 
@@ -48,34 +49,34 @@ path-help@sanger.ac.uk
 #-------------------------------------------------------------------------------
 
 # public attributes
-has 'verbose_errors' => ( is => 'rw', isa => 'Bool', default => 0 );
-has 'valid'          => ( is => 'ro', isa => 'Bool',     writer => '_set_valid',          default => undef );
-has 'invalid_rows'   => ( is => 'ro', isa => 'ArrayRef', writer => '_set_invalid_rows' );
-has 'all_rows'       => ( is => 'ro', isa => 'ArrayRef', writer => '_set_validated_rows' );
-has 'validated_file' => ( is => 'rw', isa => 'Str',      writer => '_set_validated_file', default => '' );
 
 =attr verbose_errors
 
 flag showing whether error messages in the output file should include field
 descriptions from the checklist configuration
 
-=attr valid
+=cut
 
-flag showing whether the current input file is valid. B<Read-only>
+has 'verbose_errors' => (
+  is      => 'rw',
+  isa     => 'Bool',
+  default => 0,
+);
 
-=attr invalid_rows
+=attr config
 
-list of invalid rows from current input file. B<Read-only>
-
-=attr all_rows
-
-list of all rows from current input file. B<Read-only>
-
-=attr validated_file
-
-name of the last file to be validated, if any. B<Read-only>
+configuration object (L<Bio::Metadata::Config>); B<Read-only>; specify
+at instantiation
 
 =cut
+
+has 'config' => (
+  is       => 'rw',
+  isa      => 'Bio::Metadata::Config',
+  required => 1,
+);
+
+#---------------------------------------
 
 # private attributes
 has '_field_defs'        => ( is => 'rw', isa => 'HashRef' );
@@ -96,178 +97,76 @@ has 'plugins' => (
 
 =head1 METHODS
 
-=head2 validate_csv
+=head2 validate
 
-Takes a single argument, the path to the CSV file to be validated. Returns 1 if
-the input file is valid, 0 otherwise.
-
-When a file is validated, the object stores two arrays. One contains every row
-from the input file, with error messages appended to each row if it is found
-to be invalid. The second array stores only invalid rows. Retrieve them with
-C<all_rows> and C<invalid_rows> respectively.
+Takes a single argument, the L<Bio::Metadata::Manifest|Manifest> to be
+validated. Returns 1 if the manifest is valid, 0 otherwise.
 
 =cut
 
-sub validate_csv {
-  my ( $self, $file ) = @_;
+sub validate {
+  my ( $self, $manifest ) = @_;
 
-  # check that we can read the input file
-  unless ( defined $file ) {
-    Bio::Metadata::Validator::Exception::InputFileNotFound->throw(
-      error => "ERROR: must specify a file to validate\n"
-    );
-  }
-  unless ( -e $file ) {
-    Bio::Metadata::Validator::Exception::InputFileNotFound->throw(
-      error => "ERROR: couldn't find the specified input file ($file)\n"
-    );
-  }
+  die 'ERROR: must supply a Bio::Metadata::Manifest to validate'
+    unless ( defined $manifest and ref $manifest eq 'Bio::Metadata::Manifest' );
 
-  # the example manifest CSV contains a header row. We want to avoid trying to
-  # parse this, so it should be added to the config and we'll pull it in and
-  # store the first chunk of it for future reference
-  my $header = substr( $self->config->{header_row} || '', 0, 20 );
+  # make sure we start with an empty manifest; clear out any rows that might
+  # have been stashed in it previously
+  $manifest->reset;
 
-  my $csv = Text::CSV->new;
-  open my $fh, '<:encoding(utf8)', $file
-    or Bio::Metadata::Validator::Exception::UnknownError->throw(
-         error => "ERROR: problems reading input CSV file: $!\n"
-       );
-
-  my @validated_csv = (); # stores input rows with parse errors appended
-  my @invalid_rows  = (); # stores just the input rows with parse errors
-  my $row_num       = 0;  # row counter (used for error messages)
-
-  ROW: while ( my $row_string = <$fh> ) {
+  my $row_num = 0;
+  ROW: foreach my $row ( @{ $manifest->rows } ) {
     $row_num++;
-
-    # try to skip the header row, if present, and blank rows
-    if ( $row_num == 1 and ( $row_string =~ m/^$header/ or $row_string =~ m/^\,+$/ ) ) {
-      push @validated_csv, $row_string;
-      next ROW;
-    }
-
-    # skip the empty rows that excel likes to include in CSVs
-    next ROW if $row_string =~ m/^,+[\r\n]*$/;
-
-    # the current row should now be a data row, so try parsing it
-    my $status = $csv->parse($row_string);
-    unless ( $status ) {
-      Bio::Metadata::Validator::Exception::InputFileValidationError->throw(
-        error => "ERROR: could not parse row $row_num\n"
-      );
-    }
 
     # validate the fields in the row
     my $row_errors = '';
-    my @raw_values = $csv->fields;
     try {
-      $self->_validate_row(\@raw_values, \$row_errors);
+      $self->_validate_row( $row, \$row_errors );
     }
     catch ( Bio::Metadata::Validator::Exception::NoValidatorPluginForColumnType $e ) {
       # add the row number (which we don't have in the _validate_row method) to
       # the error message and re-throw
-      Bio::Metadata::Validator::Exception::NoValidatorPluginForColumnType->throw(
-        error => "ERROR: row $row_num; " . $e->error
-      );
+      die "ERROR: row $row_num; " . $e->error;
     }
+
+    # TODO check this logic -- it's adding too many errors
 
     if ( $row_errors ) {
-      $row_string =~ s/[\r\n]//g;
-      $row_string .= ", $row_errors\n";
-      push @invalid_rows, $row_string;
+      push @$row, $row_errors;
+      $manifest->add_invalid_row( $row );
     }
-
-    push @validated_csv, $row_string;
+    $manifest->add_validated_row( $row );
   }
 
-  my $valid = scalar @invalid_rows ? 0 : 1;
-
-  $self->_set_valid( $valid );
-  $self->_set_validated_file( $file );
-  $self->_set_validated_rows( \@validated_csv );
-  $self->_set_invalid_rows( \@invalid_rows );
-
-  return $valid;
+  return $manifest->has_invalid_rows ? 0 : 1;
 }
 
 #-------------------------------------------------------------------------------
 
 =head2 print_validation_report
 
-Prints a human-readable validation report to STDOUT. No return value.
-
-Throws a C<Bio::Metadata::Validation::Exception::NotValidated> exception if no
-data have yet been validated.
+Validates the supplied manifest and prints a human-readable validation report
+to STDOUT. Returns 1 if the manifest is valid, 0 otherwise.
 
 =cut
 
 sub print_validation_report {
-  my ( $self, $file ) = @_;
+  my ( $self, $manifest ) = @_;
 
-  unless ( defined $self->valid ) {
-    Bio::Metadata::Validator::Exception::NotValidated->throw(
-      error => "ERROR: nothing validated yet\n"
-    );
-  }
+  my $valid = $self->validate( $manifest );
 
-  my $validated_file = $self->validated_file
-                     ? "'" . $self->validated_file . "' is "
+  my $validated_file = $manifest->filename
+                     ? "'" . $manifest->filename . "' is "
                      : 'input data are ';
-  if ( $self->valid ) {
+  if ( $valid ) {
     print $validated_file, colored( "valid\n", 'green' );
   }
   else {
-    my $num_invalid_rows = scalar @{$self->invalid_rows};
+    my $num_invalid_rows = $manifest->invalid_row_count;
     print $validated_file, colored( "invalid", "bold red" )
           . ". Found $num_invalid_rows invalid row"
           . ( $num_invalid_rows > 1 ? 's' : '' ) . ".\n";
   }
-}
-
-#-------------------------------------------------------------------------------
-
-=head2 validate_rows
-
-=cut
-
-sub validate_rows {
-  my ( $self, $rows ) = @_;
-
-  # clear out any old filenames
-  $self->_set_validated_file( '' );
-
-  my @validated_rows = (); # stores input rows with parse errors appended
-  my @invalid_rows   = (); # stores just the input rows with parse errors
-  my $row_num        = 0;  # row counter (used for error messages)
-
-  ROW: foreach my $row_values ( @$rows ) {
-    $row_num++;
-
-    # validate the fields in the row
-    my $row_errors = '';
-    try {
-      $self->_validate_row($row_values, \$row_errors);
-    }
-    catch ( Bio::Metadata::Validator::Exception::NoValidatorPluginForColumnType $e ) {
-      # add the row number (which we don't have in the _validate_row method) to
-      # the error message and re-throw
-      Bio::Metadata::Validator::Exception::NoValidatorPluginForColumnType->throw(
-        error => "ERROR: row $row_num; " . $e->error
-      );
-    }
-
-    push @validated_rows, [ @$row_values ];
-    push @invalid_rows, [ @$row_values, $row_errors ] if $row_errors;
-  }
-
-  my $valid = scalar @invalid_rows ? 0 : 1;
-
-  $self->_set_valid( $valid );
-  $self->_set_validated_rows( \@validated_rows );
-  $self->_set_invalid_rows( \@invalid_rows );
-
-  return $valid;
 }
 
 #-------------------------------------------------------------------------------
@@ -295,12 +194,12 @@ sub _validate_row {
   # keep track of the field definitions, hashed by field name
   my $field_definitions = {};
 
-  my $num_fields = scalar @{ $self->config->{field} };
+  my $num_fields = scalar @{ $self->config->config->{field} };
 
   FIELD: for ( my $i = 0; $i < $num_fields; $i++ ) {
     # retrieve the definition for this particular field, and add in its column
     # number for later
-    my $field_definition = $self->config->{field}->[$i];
+    my $field_definition = $self->config->config->{field}->[$i];
     $field_definition->{col_num} = $i;
 
     my $field_name  = $field_definition->{name};
@@ -367,10 +266,10 @@ sub _validate_row {
 sub _validate_if_dependencies {
   my ( $self, $row, $row_errors_ref ) = @_;
 
-  return unless defined $self->config->{dependencies}->{if};
+  return unless defined $self->config->config->{dependencies}->{if};
 
-  IF: foreach my $if_col_name ( keys %{ $self->config->{dependencies}->{if} } ) {
-    my $dependency = $self->config->{dependencies}->{if}->{$if_col_name};
+  IF: foreach my $if_col_name ( keys %{ $self->config->config->{dependencies}->{if} } ) {
+    my $dependency = $self->config->config->{dependencies}->{if}->{$if_col_name};
 
     my $field_definition = $self->_field_defs->{$if_col_name};
     unless ( defined $field_definition ) {
@@ -463,9 +362,9 @@ sub _validate_if_dependencies {
 sub _validate_one_of_dependencies {
   my ( $self, $row, $row_errors_ref ) = @_;
 
-  return unless defined $self->config->{dependencies}->{one_of};
+  return unless defined $self->config->config->{dependencies}->{one_of};
 
-  GROUP: while ( my ( $group_name, $group ) = each %{ $self->config->{dependencies}->{one_of} } ) {
+  GROUP: while ( my ( $group_name, $group ) = each %{ $self->config->config->{dependencies}->{one_of} } ) {
     my $num_completed_fields = 0;
 
     my $group_list = ref $group ? $group : [ $group ];
@@ -491,9 +390,9 @@ sub _validate_one_of_dependencies {
 sub _validate_some_of_dependencies {
   my ( $self, $row, $row_errors_ref ) = @_;
 
-  return unless defined $self->config->{dependencies}->{some_of};
+  return unless defined $self->config->config->{dependencies}->{some_of};
 
-  GROUP: while ( my ( $group_name, $group ) = each %{ $self->config->{dependencies}->{some_of} } ) {
+  GROUP: while ( my ( $group_name, $group ) = each %{ $self->config->config->{dependencies}->{some_of} } ) {
     my $num_completed_fields = 0;
 
     my $group_list = ref $group ? $group : [ $group ];

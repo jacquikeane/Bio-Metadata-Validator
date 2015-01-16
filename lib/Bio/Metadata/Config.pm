@@ -1,16 +1,17 @@
 
-package Bio::Metadata::ConfigRole;
+package Bio::Metadata::Config;
 
-# ABSTRACT: a role for handling config loading
+# ABSTRACT: a class for handling config
 
-use Moose::Role;
+use Moose;
+use namespace::autoclean;
 
 use Config::General;
 use TryCatch;
 
 =head1 NAME
 
-Bio::Metadata::ConfigRole
+Bio::Metadata::Config
 
 =head1 CONTACT
 
@@ -115,9 +116,39 @@ sub _set_config_name {
 
 =head1 METHODS
 
+=head2 fields
+
+Returns a reference to an array containing the field definitions in the
+current config.
+
 =cut
 
-# none
+sub fields {
+  my $self = shift;
+
+  return unless $self->config;
+  return $self->config->{field};
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 field_names
+
+Returns a reference to an array containing the field names in the current
+config.
+
+=cut
+
+sub field_names {
+  my $self = shift;
+
+  return unless $self->config;
+  my @names;
+  foreach my $field ( @{ $self->config->{field} } ) {
+    push @names, $field->{name};
+  }
+  return \@names;
+}
 
 #-------------------------------------------------------------------------------
 #- private methods -------------------------------------------------------------
@@ -126,6 +157,8 @@ sub _set_config_name {
 # none
 
 #-------------------------------------------------------------------------------
+
+__PACKAGE__->meta->make_immutable;
 
 1;
 
