@@ -6,6 +6,8 @@ package Bio::Metadata::Manifest;
 use Moose;
 use namespace::autoclean;
 
+use File::Slurp qw( write_file );
+
 =head1 NAME
 
 Bio::Metadata::Manifest
@@ -65,14 +67,9 @@ has 'invalid_rows' => (
   isa     => 'ArrayRef[ArrayRef]',
   default => sub { [] },
   handles => {
-    add_invalid_row    => 'push',
-    next_invalid_row   => 'shift',
-    all_invalid_rows   => 'elements',
     get_invalid_row    => 'get',
-    invalid_row_count  => 'count',
-    has_invalid_rows   => 'count',
+    set_invalid_row    => 'set',
     reset              => 'clear',
-    is_invalid         => 'count',
   },
 );
 
@@ -129,10 +126,14 @@ Returns a list of all invalid rows in the manifest.
 
 Returns a reference to the specified invalid row array.
 
-=head2 next_invalid_row
+=head2 set_invalid_row
 
-Shifts off the next invalid row in the list of invalid rows. Reduces the number
-of rows in the manifest by 1.
+Requires C<$index> and C<$row>. Sets the specified row in the list of invalid
+rows in this manifest.
+
+=head2 reset
+
+Deletes the validated and invalid rows from the manifest.
 
 =head2 invalid_row_count
 
@@ -142,11 +143,50 @@ Returns the number of invalid rows in the manifest.
 
 Returns 1 if the manifest contains invalid rows, 0 otherwise
 
-=head2 reset
+=cut
 
-Deletes the validated and invalid rows from the manifest.
+sub invalid_row_count {
+  my $self = shift;
+
+  my $count = 0;
+  foreach my $row ( @{$self->invalid_rows} ) {
+    $count++ if defined $row;
+  }
+  return $count;
+}
+
+sub has_invalid_rows {
+  return shift->invalid_row_count ? 1 : 0;
+}
+
+sub is_invalid { shift->has_invalid_rows }
+
+#-------------------------------------------------------------------------------
+
+=head2 write_csv
 
 =cut
+
+sub write_csv {
+  my ( $self, $filename ) = @_;
+
+  my @rows = ();
+  push @rows, $self->config->config->{header_row}, "\n";
+
+  my $n = 0;
+  foreach my $row ( $self->all_rows ) {
+    my $row_string = join ',', @$row;
+
+    if ( my $invalid_row = $self->get_invalid_row($n) ) {
+      $row_string .= ' ' . $invalid_row->[-1];
+    }
+
+    push @rows, "$row_string\n";
+    $n++;
+  }
+
+  write_file( $filename, @rows );
+}
 
 #-------------------------------------------------------------------------------
 

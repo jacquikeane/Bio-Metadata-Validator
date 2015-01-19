@@ -43,11 +43,11 @@ my $manifest = $reader->read_csv('t/data/01_broken_manifest.csv');
 
 is( $v->validate($manifest), 0, 'broken input file is invalid' );
 
-is( scalar @{$manifest->rows},         2, 'found expected number of rows in "all_rows" (2)' );
-is( scalar @{$manifest->invalid_rows}, 1, 'found expected number of invalid rows in "invalid_rows" (1)' );
+is( scalar @{$manifest->rows},    2, 'found expected number of rows in "all_rows" (2)' );
+is( $manifest->invalid_row_count, 1, 'found expected number of invalid rows in "invalid_rows" (1)' );
 
 is( scalar @{$manifest->rows->[0]}, 2, 'found two elements in valid row' );
-is( scalar @{$manifest->invalid_rows->[0]}, 3, 'found three elements in invalid row (includes error message)' );
+is( scalar @{$manifest->invalid_rows->[1]}, 3, 'found three elements in invalid row (includes error message)' );
 
 stdout_like( sub { $v->print_validation_report($manifest) }, qr/invalid/, 'report shows broken manifest as invalid' );
 stdout_like( sub { $v->print_validation_report($manifest) }, qr/Found 1 invalid row\./, 'report shows expected number of invalid rows' );
@@ -61,8 +61,8 @@ is( $manifest->is_invalid, 1, 'manifest "is_invalid" flag correctly shows 1' );
 
 lives_ok { $v->validate($manifest) } 'validates file with verbose error flag set true';
 
-like( $manifest->invalid_rows->[0]->[2], qr/^\[errors found on row 2\]/, 'flags errors on row 2' );
-like( $manifest->invalid_rows->[0]->[2], qr/\[value in field 'one' is not valid; field description: 'Testing description'\]/, 'invalid column flagged without description' );
+like( $manifest->invalid_rows->[1]->[2], qr/^\[errors found on row 2\]/, 'flags errors on row 2' );
+like( $manifest->invalid_rows->[1]->[2], qr/\[value in field 'one' is not valid; field description: 'Testing description'\]/, 'invalid column flagged without description' );
 
 # check everything works with a working config and manifest
 $manifest = $reader->read_csv('t/data/01_working_manifest.csv');

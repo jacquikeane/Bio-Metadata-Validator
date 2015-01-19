@@ -143,7 +143,10 @@ sub validate {
       $row_errors =~ s/^\s+|\s+$//g;
       $row_errors = "[errors found on row $row_num] $row_errors";
       push @invalid_row, $row_errors;
-      $manifest->add_invalid_row( \@invalid_row );
+
+      # push the row into the array. The row number is 1-based though, to make
+      # it easier to read the error messages. Make the count zero-based...
+      $manifest->set_invalid_row( $row_num - 1, \@invalid_row );
     }
   }
 
@@ -186,7 +189,8 @@ sub print_validation_report {
 # Walks the fields in the row and validates the values
 #
 # arguments: ref; list of raw field values
-#            ref; scalar to hold errors for this row
+#            ref; scalar to hold errors for this row; this will be modified to
+#                 add the error messages (if any) for the row
 
 sub _validate_row {
   my ( $self, $raw_values, $row_errors_ref ) = @_;

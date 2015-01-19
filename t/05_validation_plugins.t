@@ -67,7 +67,7 @@ $m = $r->read_csv('t/data/02_str.csv');
 is( $v->validate($m), 0, 'found invalid Str fields in test CSV' );
 
 is( $m->invalid_row_count, 1, 'got expected number of invalid rows' );
-like( $m->invalid_rows->[0]->[-1], qr/\[errors found on row 8\] \[value in field 'amr_regex'/,
+like( $m->invalid_rows->[7]->[-1], qr/\[errors found on row 8\] \[value in field 'amr_regex'/,
   'error with invalid AMR string' );
 
 is  ( Bio::Metadata::Validator::Plugin::Enum->validate( 'ABC', { values => [ qw( ABC DEF ) ] } ), 1, '"Enum" validates "ABC" correctly' );
