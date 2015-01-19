@@ -20,18 +20,15 @@ lives_ok { $m = Bio::Metadata::Manifest->new( config => $config ) }
    'no exception when instantiating with a config';
 
 $m->add_row( [ 1, 2 ] );
-$m->add_validated_row( [ 1, 2 ] );
 $m->add_invalid_row( [ 1, 2 ] );
 
 is( $m->row_count, 1, 'starting with one row' );
-is( $m->validated_row_count, 1, 'starting with one validated row' );
 is( $m->invalid_row_count, 1, 'starting with one invalid row' );
 ok( $m->is_invalid, '"is_invalid" correctly shows false' );
 
 $m->reset;
 
 is( $m->row_count, 1, 'still one unvalidated row' );
-is( $m->validated_row_count, 0, 'no validated rows' );
 is( $m->has_invalid_rows, 0, 'no invalid rows' );
 isnt( $m->is_invalid, 1, '"is_invalid" correctly shows true' );
 

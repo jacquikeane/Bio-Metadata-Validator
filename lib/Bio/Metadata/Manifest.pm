@@ -53,27 +53,6 @@ has 'rows' => (
   },
 );
 
-=attr validated_rows
-
-reference to the list of the validated rows in this manifest
-
-=cut
-
-has 'validated_rows' => (
-  traits  => ['Array'],
-  is      => 'rw',
-  isa     => 'ArrayRef[ArrayRef]',
-  default => sub { [] },
-  handles => {
-    add_validated_row    => 'push',
-    next_validated_row   => 'shift',
-    all_validated_rows   => 'elements',
-    get_validated_row    => 'get',
-    validated_row_count  => 'count',
-    reset_validated_rows => 'clear',
-  },
-);
-
 =attr invalid_rows
 
 reference to the list of the invalid rows in this manifest
@@ -92,7 +71,7 @@ has 'invalid_rows' => (
     get_invalid_row    => 'get',
     invalid_row_count  => 'count',
     has_invalid_rows   => 'count',
-    reset_invalid_rows => 'clear',
+    reset              => 'clear',
     is_invalid         => 'count',
   },
 );
@@ -115,21 +94,6 @@ has 'filename' => ( is => 'ro', isa => 'Str' );
 
 =head1 METHODS
 
-=head2 reset
-
-Deletes the validated and invalid rows from the manifest.
-
-=cut
-
-sub reset {
-  my $self = shift;
-
-  $self->reset_validated_rows;
-  $self->reset_invalid_rows;
-}
-
-#-------------------------------------------------------------------------------
-
 =head2 add_row
 
 Add a row to the manifest. The C<$row> should be a reference to a list of
@@ -151,28 +115,6 @@ the manifest by 1.
 =head2 row_count
 
 Returns the number of rows in the manifest.
-
-=head2 add_validated_row
-
-Adds a validated row to the manifest. The C<$row> should be a reference to a
-list of field values.
-
-=head2 all_validated_rows
-
-Returns a list of all validated rows in the manifest.
-
-=head2 get_validated_row
-
-Returns a reference to the specified validated row array.
-
-=head2 next_validated_row
-
-Shifts off the next validated row in the list of validated rows. Reduces the
-number of validated rows in the manifest by 1.
-
-=head2 validated_row_count
-
-Returns the number of validated rows in the manifest.
 
 =head2 add_invalid_row
 
@@ -199,6 +141,10 @@ Returns the number of invalid rows in the manifest.
 =head2 has_invalid_rows
 
 Returns 1 if the manifest contains invalid rows, 0 otherwise
+
+=head2 reset
+
+Deletes the validated and invalid rows from the manifest.
 
 =cut
 

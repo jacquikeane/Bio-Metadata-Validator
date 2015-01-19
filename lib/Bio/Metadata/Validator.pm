@@ -135,8 +135,8 @@ sub validate {
     if ( $row_errors ) {
       # since we're pushing the error message onto the invalid rows, we need to
       # clone the row values, otherwise, if we just stored the reference to the
-      # row in list of invalid rows, we'd have the error message on rows in both
-      # "invalid_rows" and "validated_rows"
+      # row in list of invalid rows, we'd have the error message on the original
+      # rows
       my @invalid_row = @$row;
 
       # add the row number to the error message
@@ -145,7 +145,6 @@ sub validate {
       push @invalid_row, $row_errors;
       $manifest->add_invalid_row( \@invalid_row );
     }
-    $manifest->add_validated_row( $row );
   }
 
   return $manifest->has_invalid_rows ? 0 : 1;
