@@ -10,12 +10,14 @@ use Text::CSV;
 use File::Slurp;
 use Digest::MD5 qw( md5_hex );
 use Term::ANSIColor;
+use Carp qw( croak );
 
 with 'MooseX::Role::Pluggable';
 
 use Bio::Metadata::Reader;
 use Bio::Metadata::Config;
 use Bio::Metadata::Manifest;
+use Bio::Metadata::Validator::Exception;
 
 =head1 NAME
 
@@ -23,22 +25,23 @@ Bio::Metadata::Validator
 
 =head1 SYNOPSIS
 
- # create an object, handing in the path to the config file
- my $v = Bio::Metadata::Validator->new( config_file => 'hicf.conf', config_name => 'hicf' );
+ # create a config object
+ my $config = Bio::Metadata::Config->new( config_file => 'hicf.conf', config_name => 'hicf' );
 
- # validate a CSV file
- $v->validate_csv('hicf.csv');
+ # create a reader
+ my $reader= Bio::Metadata::Reader->new( config => $config );
 
- # validate a data structure
- my $data = [
-  [ 1, 2, 3 ],
-  [ 4, 5, 6 ],
-  ...
- ];
- $v->validate_rows($data);
+ # create a validator
+ my $validator = Bio::Metadata::Validator->new( config => $config );
 
- # display the validation report
- $v->print_validation_report
+ # read a CSV file and get a Bio::Metadata::Manifest
+ my $manifest = $reader->read_csv( 'hicf.csv' );
+
+ # validate the manifest; returns 1 if valid, 0 otherwise
+ my $valid = $validator->validate_csv( $manifest );
+
+ # or validate the manifest and display the validation report
+ $validator->print_validation_report( $manifest );
 
 =head1 CONTACT
 
@@ -107,11 +110,11 @@ validated. Returns 1 if the manifest is valid, 0 otherwise.
 sub validate {
   my ( $self, $manifest ) = @_;
 
-  die 'ERROR: must supply a Bio::Metadata::Manifest to validate'
+  croak 'ERROR: must supply a Bio::Metadata::Manifest to validate'
     unless ( defined $manifest and ref $manifest eq 'Bio::Metadata::Manifest' );
 
-  # make sure we start with an empty manifest; clear out any rows that might
-  # have been stashed in it previously
+  # reset the manifest before validating, otherwise, if the manifest has been
+  # validated previously, we'll have duplicate invalid rows
   $manifest->reset;
 
   my $row_num = 0;
@@ -126,14 +129,21 @@ sub validate {
     catch ( Bio::Metadata::Validator::Exception::NoValidatorPluginForColumnType $e ) {
       # add the row number (which we don't have in the _validate_row method) to
       # the error message and re-throw
-      die "ERROR: row $row_num; " . $e->error;
+      croak "ERROR: row $row_num; " . $e->error;
     }
 
-    # TODO check this logic -- it's adding too many errors
-
     if ( $row_errors ) {
-      push @$row, $row_errors;
-      $manifest->add_invalid_row( $row );
+      # since we're pushing the error message onto the invalid rows, we need to
+      # clone the row values, otherwise, if we just stored the reference to the
+      # row in list of invalid rows, we'd have the error message on rows in both
+      # "invalid_rows" and "validated_rows"
+      my @invalid_row = @$row;
+
+      # add the row number to the error message
+      $row_errors =~ s/^\s+|\s+$//g;
+      $row_errors = "[errors found on row $row_num] $row_errors";
+      push @invalid_row, $row_errors;
+      $manifest->add_invalid_row( \@invalid_row );
     }
     $manifest->add_validated_row( $row );
   }
@@ -243,6 +253,7 @@ sub _validate_row {
       else {
         $$row_errors_ref .= "[value in field '$field_name' is not valid] ";
       }
+      my $x = 0;
     }
   }
 

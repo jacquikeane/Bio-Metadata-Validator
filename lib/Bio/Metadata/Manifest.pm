@@ -50,7 +50,6 @@ has 'rows' => (
     all_rows   => 'elements',
     get_row    => 'get',
     row_count  => 'count',
-    reset_rows => 'clear',
   },
 );
 
@@ -92,8 +91,9 @@ has 'invalid_rows' => (
     all_invalid_rows   => 'elements',
     get_invalid_row    => 'get',
     invalid_row_count  => 'count',
-    reset_invalid_rows => 'clear',
     has_invalid_rows   => 'count',
+    reset_invalid_rows => 'clear',
+    is_invalid         => 'count',
   },
 );
 

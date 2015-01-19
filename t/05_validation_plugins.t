@@ -32,15 +32,19 @@ isnt( Bio::Metadata::Validator::Plugin::Int->validate( {}    ), 1, '"Int" invali
 isnt( Bio::Metadata::Validator::Plugin::Int->validate( ''    ), 1, '"Int" invalidates "" correctly' );
 isnt( Bio::Metadata::Validator::Plugin::Int->validate( ' '   ), 1, '"Int" invalidates " " correctly' );
 
-my $v = Bio::Metadata::Validator->new( config_file => 't/data/02_plugins.conf', config_name => 'int' );
-is( $v->validate_csv('t/data/02_int.csv'), 0, 'found invalid Int fields in test CSV' );
+my $c = Bio::Metadata::Config->new( config_file => 't/data/02_plugins.conf',
+                                    config_name => 'int' );
+my $v = Bio::Metadata::Validator->new(config => $c);
+my $r = Bio::Metadata::Reader->new(config => $c);
+my $m = $r->read_csv('t/data/02_int.csv');
 
-  like( $v->all_rows->[1], qr/value in field 'int' is not valid/, 'error with field that fails basic test for integer' );
-  like( $v->all_rows->[2], qr/value in field 'top_limit' is not valid/, 'error with int > limit' );
-  like( $v->all_rows->[3], qr/value in field 'bottom_limit' is not valid/, 'error with int < limit' );
-  like( $v->all_rows->[4], qr/value in field 'bound' is not valid/, 'error with int < lower bound' );
-  like( $v->all_rows->[5], qr/value in field 'bound' is not valid/, 'error with int > upper bound' );
-unlike( $v->all_rows->[6], qr/value in field '.*?' is not valid/, 'no error on valid row' );
+is( $v->validate($m), 0, 'found invalid Int fields in test CSV' );
+
+like( $m->invalid_rows->[0]->[-1], qr/value in field 'int' is not valid/, 'error with field that fails basic test for integer' );
+like( $m->invalid_rows->[1]->[-1], qr/value in field 'top_limit' is not valid/, 'error with int > limit' );
+like( $m->invalid_rows->[2]->[-1], qr/value in field 'bottom_limit' is not valid/, 'error with int < limit' );
+like( $m->invalid_rows->[3]->[-1], qr/value in field 'bound' is not valid/, 'error with int < lower bound' );
+like( $m->invalid_rows->[4]->[-1], qr/value in field 'bound' is not valid/, 'error with int > upper bound' );
 
 is  ( Bio::Metadata::Validator::Plugin::Str->validate( 'a'   ), 1, '"Str" validates "a" correctly' );
 is  ( Bio::Metadata::Validator::Plugin::Str->validate( 'abc' ), 1, '"Str" validates "abc" correctly' );
@@ -57,18 +61,14 @@ TODO: {
   isnt( Bio::Metadata::Validator::Plugin::Str->validate( '§'   ), 1, '"Str" invalidates "§" correctly' );
 }
 
-$v->config_name('str');
-is( $v->validate_csv('t/data/02_str.csv'), 0, 'found invalid Str fields in test CSV' );
+$c->config_name('str');
+$m = $r->read_csv('t/data/02_str.csv');
 
-unlike( $v->all_rows->[1], qr/value in field '.*?' is not valid/, 'no error with quoted multiple names' );
-unlike( $v->all_rows->[2], qr/value in field '.*?' is not valid/, 'no error with double-quoted multiple names' );
-unlike( $v->all_rows->[4], qr/value in field '.*?' is not valid/, 'no error with name with an apostrophe' );
-unlike( $v->all_rows->[5], qr/value in field '.*?' is not valid/, 'no error with single, unquoted name' );
-unlike( $v->all_rows->[6], qr/value in field '.*?' is not valid/, 'no error with single, quoted name' );
+is( $v->validate($m), 0, 'found invalid Str fields in test CSV' );
 
-unlike( $v->all_rows->[7], qr/value in field '.*?' is not valid/, 'no error with AMR regex and valid string' );
-  like( $v->all_rows->[8], qr/value in field 'amr_regex' is not valid/, 'error with invalid AMR string' );
-unlike( $v->all_rows->[9], qr/value in field '.*?' is not valid/, 'no error with AMR regex and valid string' );
+is( $m->invalid_row_count, 1, 'got expected number of invalid rows' );
+like( $m->invalid_rows->[0]->[-1], qr/\[errors found on row 8\] \[value in field 'amr_regex'/,
+  'error with invalid AMR string' );
 
 is  ( Bio::Metadata::Validator::Plugin::Enum->validate( 'ABC', { values => [ qw( ABC DEF ) ] } ), 1, '"Enum" validates "ABC" correctly' );
 is  ( Bio::Metadata::Validator::Plugin::Enum->validate( 'ABC', { values => [ qw( ABC ) ] } ), 1, '"Enum" validates "ABC" correctly against single field' );
