@@ -41,7 +41,7 @@ Bio::Metadata::Validator
  my $valid = $validator->validate_csv( $manifest );
 
  # or validate the manifest and display the validation report
- $validator->print_validation_report( $manifest );
+ $valid = $validator->print_validation_report( $manifest );
 
 =head1 CONTACT
 
@@ -162,6 +162,9 @@ to STDOUT. Returns 1 if the manifest is valid, 0 otherwise.
 
 =cut
 
+# TODO this could (and probably should) be extended to display the row-by-row
+# TODO error messages in a friendly format
+
 sub print_validation_report {
   my ( $self, $manifest ) = @_;
 
@@ -179,6 +182,8 @@ sub print_validation_report {
           . ". Found $num_invalid_rows invalid row"
           . ( $num_invalid_rows > 1 ? 's' : '' ) . ".\n";
   }
+
+  return $valid;
 }
 
 #-------------------------------------------------------------------------------
@@ -207,12 +212,12 @@ sub _validate_row {
   # keep track of the field definitions, hashed by field name
   my $field_definitions = {};
 
-  my $num_fields = scalar @{ $self->config->config->{field} };
+  my $num_fields = scalar @{ $self->config->get('field') };
 
   FIELD: for ( my $i = 0; $i < $num_fields; $i++ ) {
     # retrieve the definition for this particular field, and add in its column
     # number for later
-    my $field_definition = $self->config->config->{field}->[$i];
+    my $field_definition = $self->config->get('field')->[$i];
     $field_definition->{col_num} = $i;
 
     my $field_name  = $field_definition->{name};
@@ -280,10 +285,11 @@ sub _validate_row {
 sub _validate_if_dependencies {
   my ( $self, $row, $row_errors_ref ) = @_;
 
-  return unless defined $self->config->config->{dependencies}->{if};
+  return unless ( defined $self->config->get('dependencies') and
+                  exists $self->config->get('dependencies')->{if} );
 
-  IF: foreach my $if_col_name ( keys %{ $self->config->config->{dependencies}->{if} } ) {
-    my $dependency = $self->config->config->{dependencies}->{if}->{$if_col_name};
+  IF: foreach my $if_col_name ( keys %{ $self->config->get('dependencies')->{if} } ) {
+    my $dependency = $self->config->get('dependencies')->{if}->{$if_col_name};
 
     my $field_definition = $self->_field_defs->{$if_col_name};
     unless ( defined $field_definition ) {
@@ -376,9 +382,10 @@ sub _validate_if_dependencies {
 sub _validate_one_of_dependencies {
   my ( $self, $row, $row_errors_ref ) = @_;
 
-  return unless defined $self->config->config->{dependencies}->{one_of};
+  return unless ( defined $self->config->get('dependencies') and
+                  exists $self->config->get('dependencies')->{one_of} );
 
-  GROUP: while ( my ( $group_name, $group ) = each %{ $self->config->config->{dependencies}->{one_of} } ) {
+  GROUP: while ( my ( $group_name, $group ) = each %{ $self->config->get('dependencies')->{one_of} } ) {
     my $num_completed_fields = 0;
 
     my $group_list = ref $group ? $group : [ $group ];
@@ -404,9 +411,10 @@ sub _validate_one_of_dependencies {
 sub _validate_some_of_dependencies {
   my ( $self, $row, $row_errors_ref ) = @_;
 
-  return unless defined $self->config->config->{dependencies}->{some_of};
+  return unless ( defined $self->config->get('dependencies') and
+                  exists $self->config->get('dependencies')->{some_of} );
 
-  GROUP: while ( my ( $group_name, $group ) = each %{ $self->config->config->{dependencies}->{some_of} } ) {
+  GROUP: while ( my ( $group_name, $group ) = each %{ $self->config->get('dependencies')->{some_of} } ) {
     my $num_completed_fields = 0;
 
     my $group_list = ref $group ? $group : [ $group ];

@@ -37,7 +37,7 @@ has 'config' => (
 
 =attr rows
 
-reference to the list of the rows in this manifest
+reference to an array containing the rows in this manifest
 
 =cut
 
@@ -47,6 +47,7 @@ has 'rows' => (
   isa     => 'ArrayRef[ArrayRef]',
   default => sub { [] },
   handles => {
+    add_rows   => 'push',
     add_row    => 'push',
     next_row   => 'shift',
     all_rows   => 'elements',
@@ -57,7 +58,9 @@ has 'rows' => (
 
 =attr invalid_rows
 
-reference to the list of the invalid rows in this manifest
+reference to an array containing the invalid rows in this manifest. The invalid
+rows are inserted at the same position in the original array, meaning that this
+array will have C<undef> at positions where the original row is valid.
 
 =cut
 
@@ -67,9 +70,10 @@ has 'invalid_rows' => (
   isa     => 'ArrayRef[ArrayRef]',
   default => sub { [] },
   handles => {
-    get_invalid_row    => 'get',
-    set_invalid_row    => 'set',
-    reset              => 'clear',
+    all_invalid_rows => 'elements',
+    get_invalid_row  => 'get',
+    set_invalid_row  => 'set',
+    reset            => 'clear',
   },
 );
 
@@ -91,14 +95,19 @@ has 'filename' => ( is => 'ro', isa => 'Str' );
 
 =head1 METHODS
 
-=head2 add_row
+=head2 add_rows($row1, $row2, ...)
 
-Add a row to the manifest. The C<$row> should be a reference to a list of
-field values.
+Add one or more rows to the manifest. C<$row> should be a reference to a list
+of field values.
+
+=head2 add_row($row)
+
+Add a single row to the manifest.
 
 =head2 all_rows
 
-Returns a list of all rows in the manifest.
+Returns all of the rows in the manifest as an array (as opposed to an array
+ref).
 
 =head2 get_row
 
@@ -113,23 +122,27 @@ the manifest by 1.
 
 Returns the number of rows in the manifest.
 
-=head2 add_invalid_row
+=head2 add_invalid_row($row)
 
 Adds an invalid row to the manifest. The C<$row> should be a reference to a
 list of field values.
 
 =head2 all_invalid_rows
 
-Returns a list of all invalid rows in the manifest.
+Returns all of the invalid rows in the manifest as an array (as opposed to
+an array ref).
 
-=head2 get_invalid_row
+=head2 get_invalid_row($index)
 
-Returns a reference to the specified invalid row array.
+Returns a reference to the specified invalid row array. Note that the row index
+is zero-based when calling this method, i.e. the first row in the manifest is
+0, not 1.
 
-=head2 set_invalid_row
+=head2 set_invalid_row($index, $row)
 
-Requires C<$index> and C<$row>. Sets the specified row in the list of invalid
-rows in this manifest.
+Sets the specified row in the list of invalid rows in this manifest. Note that
+the row index is zero-based when calling this method, i.e. the first row in the
+manifest is 0, not 1.
 
 =head2 reset
 
@@ -137,11 +150,9 @@ Deletes the validated and invalid rows from the manifest.
 
 =head2 invalid_row_count
 
-Returns the number of invalid rows in the manifest.
-
-=head2 has_invalid_rows
-
-Returns 1 if the manifest contains invalid rows, 0 otherwise
+Returns the number of invalid rows in the manifest. Note that this is different
+to the number of rows in the array containing the invalid rows, since there will
+be empty slots corresponding to the valid rows in the original array.
 
 =cut
 
@@ -155,34 +166,59 @@ sub invalid_row_count {
   return $count;
 }
 
+=head2 has_invalid_rows
+
+Returns 1 if the manifest contains invalid rows, 0 otherwise
+
+=cut
+
 sub has_invalid_rows {
   return shift->invalid_row_count ? 1 : 0;
 }
+
+=head2 is_invalid
+
+Alias for L<has_invalid_rows>.
+
+=cut
 
 sub is_invalid { shift->has_invalid_rows }
 
 #-------------------------------------------------------------------------------
 
-=head2 write_csv
+=head2 write_csv($filename, $invalid_only)
+
+Writes the current manifest as a CSV file with the specified filename. If
+C<$invalid_only> is set to true, only invalid rows will be written to the
+file.
 
 =cut
 
 sub write_csv {
-  my ( $self, $filename ) = @_;
+  my ( $self, $filename, $invalid_only ) = @_;
 
-  my @rows = ();
-  push @rows, $self->config->config->{header_row}, "\n";
+  my @rows = ( $self->config->get('header_row') . "\n" );
 
-  my $n = 0;
-  foreach my $row ( $self->all_rows ) {
-    my $row_string = join ',', @$row;
-
-    if ( my $invalid_row = $self->get_invalid_row($n) ) {
-      $row_string .= ' ' . $invalid_row->[-1];
+  if ( $invalid_only ) {
+    foreach my $row ( $self->all_invalid_rows ) {
+      next unless defined $row;
+      push @rows, join(',', @$row) . "\n";
     }
+  }
+  else {
+    my $n = 0;
+    foreach my $row ( $self->all_rows ) {
+      my $row_string = join ',', @$row;
 
-    push @rows, "$row_string\n";
-    $n++;
+      # interleave the invalid rows
+      if ( my $invalid_row = $self->get_invalid_row($n) ) {
+        # append the error message to the CSV row string
+        $row_string .= ',' . $invalid_row->[-1];
+      }
+
+      push @rows, "$row_string\n";
+      $n++;
+    }
   }
 
   write_file( $filename, @rows );

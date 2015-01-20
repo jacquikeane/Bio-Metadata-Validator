@@ -36,9 +36,11 @@ has 'config_name' => (
 );
 
 has 'config' => (
-  is     => 'ro',
-  isa    => 'HashRef',
-  writer => '_set_config',
+  traits  => ['Hash'],
+  is      => 'ro',
+  isa     => 'HashRef',
+  writer  => '_set_config',
+  handles => { get => 'get' },
 );
 
 =attr config_name
