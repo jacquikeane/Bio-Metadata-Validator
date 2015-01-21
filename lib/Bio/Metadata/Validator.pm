@@ -15,7 +15,6 @@ use Carp qw( croak );
 with 'MooseX::Role::Pluggable';
 
 use Bio::Metadata::Reader;
-use Bio::Metadata::Config;
 use Bio::Metadata::Manifest;
 use Bio::Metadata::Validator::Exception;
 
@@ -31,11 +30,11 @@ Bio::Metadata::Validator
  # create a reader
  my $reader= Bio::Metadata::Reader->new( config => $config );
 
- # create a validator
- my $validator = Bio::Metadata::Validator->new( config => $config );
-
  # read a CSV file and get a Bio::Metadata::Manifest
  my $manifest = $reader->read_csv( 'hicf.csv' );
+
+ # create a validator
+ my $validator = Bio::Metadata::Validator->new;
 
  # validate the manifest; returns 1 if valid, 0 otherwise
  my $valid = $validator->validate_csv( $manifest );
@@ -66,27 +65,16 @@ has 'verbose_errors' => (
   default => 0,
 );
 
-=attr config
-
-configuration object (L<Bio::Metadata::Config>); B<Read-only>; specify
-at instantiation
-
-=cut
-
-has 'config' => (
-  is       => 'rw',
-  isa      => 'Bio::Metadata::Config',
-  required => 1,
-);
-
 #---------------------------------------
 
 # private attributes
+
 has '_field_defs'        => ( is => 'rw', isa => 'HashRef' );
 has '_field_values'      => ( is => 'rw', isa => 'HashRef' );
 has '_valid_fields'      => ( is => 'rw', isa => 'HashRef' );
 has '_checked_if_config' => ( is => 'rw', isa => 'Bool', default => 0 );
 has '_checked_eo_config' => ( is => 'rw', isa => 'Bool', default => 0 );
+has '_config'            => ( is => 'rw', isa => 'Bio::Metadata::Config' );
 
 # field-validation plugins
 has 'plugins' => (
@@ -116,6 +104,9 @@ sub validate {
   # reset the manifest before validating, otherwise, if the manifest has been
   # validated previously, we'll have duplicate invalid rows
   $manifest->reset;
+
+  # store the configuration object for convenience
+  $self->_config( $manifest->config );
 
   my $row_num = 0;
   ROW: foreach my $row ( @{ $manifest->rows } ) {
@@ -212,12 +203,12 @@ sub _validate_row {
   # keep track of the field definitions, hashed by field name
   my $field_definitions = {};
 
-  my $num_fields = scalar @{ $self->config->get('field') };
+  my $num_fields = scalar @{ $self->_config->get('field') };
 
   FIELD: for ( my $i = 0; $i < $num_fields; $i++ ) {
     # retrieve the definition for this particular field, and add in its column
     # number for later
-    my $field_definition = $self->config->get('field')->[$i];
+    my $field_definition = $self->_config->get('field')->[$i];
     $field_definition->{col_num} = $i;
 
     my $field_name  = $field_definition->{name};
@@ -285,11 +276,11 @@ sub _validate_row {
 sub _validate_if_dependencies {
   my ( $self, $row, $row_errors_ref ) = @_;
 
-  return unless ( defined $self->config->get('dependencies') and
-                  exists $self->config->get('dependencies')->{if} );
+  return unless ( defined $self->_config->get('dependencies') and
+                  exists $self->_config->get('dependencies')->{if} );
 
-  IF: foreach my $if_col_name ( keys %{ $self->config->get('dependencies')->{if} } ) {
-    my $dependency = $self->config->get('dependencies')->{if}->{$if_col_name};
+  IF: foreach my $if_col_name ( keys %{ $self->_config->get('dependencies')->{if} } ) {
+    my $dependency = $self->_config->get('dependencies')->{if}->{$if_col_name};
 
     my $field_definition = $self->_field_defs->{$if_col_name};
     unless ( defined $field_definition ) {
@@ -382,10 +373,10 @@ sub _validate_if_dependencies {
 sub _validate_one_of_dependencies {
   my ( $self, $row, $row_errors_ref ) = @_;
 
-  return unless ( defined $self->config->get('dependencies') and
-                  exists $self->config->get('dependencies')->{one_of} );
+  return unless ( defined $self->_config->get('dependencies') and
+                  exists $self->_config->get('dependencies')->{one_of} );
 
-  GROUP: while ( my ( $group_name, $group ) = each %{ $self->config->get('dependencies')->{one_of} } ) {
+  GROUP: while ( my ( $group_name, $group ) = each %{ $self->_config->get('dependencies')->{one_of} } ) {
     my $num_completed_fields = 0;
 
     my $group_list = ref $group ? $group : [ $group ];
@@ -411,10 +402,10 @@ sub _validate_one_of_dependencies {
 sub _validate_some_of_dependencies {
   my ( $self, $row, $row_errors_ref ) = @_;
 
-  return unless ( defined $self->config->get('dependencies') and
-                  exists $self->config->get('dependencies')->{some_of} );
+  return unless ( defined $self->_config->get('dependencies') and
+                  exists $self->_config->get('dependencies')->{some_of} );
 
-  GROUP: while ( my ( $group_name, $group ) = each %{ $self->config->get('dependencies')->{some_of} } ) {
+  GROUP: while ( my ( $group_name, $group ) = each %{ $self->_config->get('dependencies')->{some_of} } ) {
     my $num_completed_fields = 0;
 
     my $group_list = ref $group ? $group : [ $group ];

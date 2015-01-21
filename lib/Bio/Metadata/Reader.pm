@@ -26,15 +26,20 @@ path-help@sanger.ac.uk
 # public attributes
 
 has 'config' => (
-  is       => 'ro',
+  is       => 'rw',
   isa      => 'Bio::Metadata::Config',
   required => 1,
 );
 
 =attr config
 
-configuration object (L<Bio::Metadata::Config>); B<Read-only>; supply at
-instantiation
+A reference to a L<Bio::Metadata::Config> configuration object. This config
+object will be passed to all L<Bio::Metadata::Manifest> objects created by this
+reader.
+
+Setting a new configuration after instantiation will only affect manifests
+created after that point; previously generated manifests will retain their
+reference to the original config object.
 
 =cut
 

@@ -21,6 +21,15 @@ my $config = Bio::Metadata::Config->new( config_file => 't/data/01_single.conf' 
 lives_ok { $m = Bio::Metadata::Manifest->new( config => $config ) }
    'no exception when instantiating with a config';
 
+my $expected_field_defs = [
+  { name => 'one', type => 'Bool', description => 'Testing description' },
+  { name => 'two', type => 'Str' },
+];
+my $expected_field_names = [ qw( one two ) ];
+
+is_deeply( $m->fields,      $expected_field_defs,  'got expected fields from config via manifest' );
+is_deeply( $m->field_names, $expected_field_names, 'got expected field names from config via manifest' );
+
 $m->add_rows( [ 1, 2 ], [ 3, 4 ], [ 5, 6 ] );
 $m->set_invalid_row( 2, [ 5, 6, '[error message]' ] );
 

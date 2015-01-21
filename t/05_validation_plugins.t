@@ -34,8 +34,8 @@ isnt( Bio::Metadata::Validator::Plugin::Int->validate( ' '   ), 1, '"Int" invali
 
 my $c = Bio::Metadata::Config->new( config_file => 't/data/02_plugins.conf',
                                     config_name => 'int' );
-my $v = Bio::Metadata::Validator->new(config => $c);
 my $r = Bio::Metadata::Reader->new(config => $c);
+my $v = Bio::Metadata::Validator->new;
 my $m = $r->read_csv('t/data/02_int.csv');
 
 is( $v->validate($m), 0, 'found invalid Int fields in test CSV' );
@@ -105,20 +105,20 @@ SKIP: {
   Test::CacheFile::cache( 'http://purl.obolibrary.org/obo/gaz.obo', 'gaz.obo' );
   Test::CacheFile::cache( 'http://www.brenda-enzymes.info/ontology/tissue/tree/update/update_files/BrendaTissueOBO', 'bto.obo' );
 
-  $v = Bio::Metadata::Validator->new( config_file => 't/data/02_ontology.conf' );
+  $c = Bio::Metadata::Config->new( config_file => 't/data/02_ontology.conf' );
+  $r->config($c);
+  $m = $r->read_csv('t/data/02_ontology.csv');
 
-  is( $v->validate_csv('t/data/02_ontology.csv'), 0, 'file is marked as invalid when parsing CSV bad ontology field' );
+  is( $v->validate($m), 0, 'file is marked as invalid when parsing CSV bad ontology field' );
 
-  like  ( $v->all_rows->[1], qr/value in field 'envo_term' is not valid/, 'error with bad ontology field' );
+  like( $m->invalid_rows->[0]->[-1], qr/errors found on row 1] \[value in field 'envo_term' is not valid/, 'error with bad ontology field' );
+  like( $m->invalid_rows->[2]->[-1], qr/errors found on row 3] \[value in field 'envo_term' is not valid/, 'error with invalid EnvO term' );
+  like( $m->invalid_rows->[4]->[-1], qr/errors found on row 5] \[value in field 'gaz_term' is not valid/, 'error with invalid GAZ field' );
+  like( $m->invalid_rows->[6]->[-1], qr/errors found on row 7] \[value in field 'bto_term' is not valid/, 'error with invalid BRENDA field' );
 
-  unlike( $v->all_rows->[2], qr/value in field 'envo_term' is not valid/, 'no error with valid EnvO term' );
-  like  ( $v->all_rows->[3], qr/value in field 'envo_term' is not valid/, 'error with invalid EnvO term' );
-
-  unlike( $v->all_rows->[4], qr/value in field 'gaz_term' is not valid/, 'no error with valid GAZ ontology field' );
-  like  ( $v->all_rows->[5], qr/value in field 'gaz_term' is not valid/, 'error with invalid GAZ ontology field' );
-
-  unlike( $v->all_rows->[6], qr/value in field 'bto_term' is not valid/, 'no error with valid BRENDA ontology field' );
-  like  ( $v->all_rows->[7], qr/value in field 'bto_term' is not valid/, 'error with invalid BRENDA ontology field' );
+  is( $m->invalid_rows->[1]->[-1], undef, 'no error with valid EnvO term' );
+  is( $m->invalid_rows->[3]->[-1], undef, 'no error with valid gaz term' );
+  is( $m->invalid_rows->[5]->[-1], undef, 'no error with valid BRENDA term' );
 }
 
 done_testing;

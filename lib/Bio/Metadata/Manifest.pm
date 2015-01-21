@@ -33,6 +33,7 @@ has 'config' => (
   is       => 'ro',
   isa      => 'Bio::Metadata::Config',
   required => 1,
+  handles  => [ 'field_names', 'fields' ],
 );
 
 =attr rows

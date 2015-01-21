@@ -53,7 +53,7 @@ my $reader = Bio::Metadata::Reader->new( config => $config );
 my $manifest = $reader->read_csv($file);
 
 # get a validator using the config object
-my $v = Bio::Metadata::Validator->new( config => $config );
+my $v = Bio::Metadata::Validator->new;
 
 $v->verbose_errors( $opt->verbose_errors );
 
