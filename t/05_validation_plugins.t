@@ -32,11 +32,11 @@ isnt( Bio::Metadata::Validator::Plugin::Int->validate( {}    ), 1, '"Int" invali
 isnt( Bio::Metadata::Validator::Plugin::Int->validate( ''    ), 1, '"Int" invalidates "" correctly' );
 isnt( Bio::Metadata::Validator::Plugin::Int->validate( ' '   ), 1, '"Int" invalidates " " correctly' );
 
-my $c = Bio::Metadata::Config->new( config_file => 't/data/02_plugins.conf',
+my $c = Bio::Metadata::Config->new( config_file => 't/data/05_plugins.conf',
                                     config_name => 'int' );
 my $r = Bio::Metadata::Reader->new(config => $c);
 my $v = Bio::Metadata::Validator->new;
-my $m = $r->read_csv('t/data/02_int.csv');
+my $m = $r->read_csv('t/data/05_int.csv');
 
 is( $v->validate($m), 0, 'found invalid Int fields in test CSV' );
 
@@ -62,7 +62,7 @@ TODO: {
 }
 
 $c->config_name('str');
-$m = $r->read_csv('t/data/02_str.csv');
+$m = $r->read_csv('t/data/05_str.csv');
 
 is( $v->validate($m), 0, 'found invalid Str fields in test CSV' );
 
@@ -105,9 +105,9 @@ SKIP: {
   Test::CacheFile::cache( 'http://purl.obolibrary.org/obo/gaz.obo', 'gaz.obo' );
   Test::CacheFile::cache( 'http://www.brenda-enzymes.info/ontology/tissue/tree/update/update_files/BrendaTissueOBO', 'bto.obo' );
 
-  $c = Bio::Metadata::Config->new( config_file => 't/data/02_ontology.conf' );
+  $c = Bio::Metadata::Config->new( config_file => 't/data/05_ontology.conf' );
   $r->config($c);
-  $m = $r->read_csv('t/data/02_ontology.csv');
+  $m = $r->read_csv('t/data/05_ontology.csv');
 
   is( $v->validate($m), 0, 'file is marked as invalid when parsing CSV bad ontology field' );
 

@@ -18,7 +18,7 @@ throws_ok { $r = Bio::Metadata::Reader->new( config => {} ) }
   qr/Attribute \(config\) does not pass the type constraint/,
   'exception when passing in an invalid config object';
 
-my $config = Bio::Metadata::Config->new( config_file => 't/data/01_single.conf' );
+my $config = Bio::Metadata::Config->new( config_file => 't/data/02_manifest.conf' );
 
 lives_ok { $r = Bio::Metadata::Reader->new( config => $config ) }
   'no exception with a valid B::M::Config object';
@@ -30,7 +30,7 @@ throws_ok { $r->read_csv('non-existent file') }
   qr/no such input file/, 'exception with non-existent input file';
 
 my $manifest;
-ok( $manifest = $r->read_csv('t/data/01_working_manifest.csv'), '"read" works with a valid manifest' );
+ok( $manifest = $r->read_csv('t/data/02_working_manifest.csv'), '"read" works with a valid manifest' );
 
 isa_ok( $manifest, 'Bio::Metadata::Manifest' );
 

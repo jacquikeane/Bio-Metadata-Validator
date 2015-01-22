@@ -16,7 +16,7 @@ my $m;
 throws_ok { $m = Bio::Metadata::Manifest->new }
   qr/Attribute \(config\) is required/, 'exception when instantiating without a config';
 
-my $config = Bio::Metadata::Config->new( config_file => 't/data/01_single.conf' );
+my $config = Bio::Metadata::Config->new( config_file => 't/data/03_manifest.conf' );
 
 lives_ok { $m = Bio::Metadata::Manifest->new( config => $config ) }
    'no exception when instantiating with a config';

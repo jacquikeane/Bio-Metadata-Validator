@@ -9,11 +9,11 @@ use Test::Exception;
 use Bio::Metadata::Validator;
 
 # test a bad config
-my $c = Bio::Metadata::Config->new( config_file => 't/data/03_relationships.conf',
+my $c = Bio::Metadata::Config->new( config_file => 't/data/06_relationships.conf',
                                     config_name => 'broken' );
 my $r = Bio::Metadata::Reader->new( config => $c );
 my $v = Bio::Metadata::Validator->new;
-my $m = $r->read_csv('t/data/03_if.csv');
+my $m = $r->read_csv('t/data/06_if.csv');
 
 throws_ok { $v->validate($m) }
   qr/fields with an 'if' dependency/, 'exception when validating against bad config ("if" field is not boolean)';
@@ -39,7 +39,7 @@ like( $m->invalid_rows->[13]->[-1], qr/^\[errors found on row 14] \[field 'seven
 
 # "one_of" relationships
 $c->config_name('one_of');
-$m = $r->read_csv('t/data/03_one_of.csv');
+$m = $r->read_csv('t/data/06_one_of.csv');
 is( $v->validate($m), 0, 'broken "one of" relationship input file marked as invalid' );
 is( $m->invalid_row_count, 3, 'got expected number of invalid rows (3)' );
 
@@ -50,7 +50,7 @@ like( $m->invalid_rows->[3]->[-1], qr/\[exactly one field out of 'twelve'.*?foun
 
 # "some_of" relationships
 $c->config_name('some_of');
-$m = $r->read_csv('t/data/03_some_of.csv');
+$m = $r->read_csv('t/data/06_some_of.csv');
 is( $v->validate($m), 0, 'broken "some of" relationship input file marked as invalid' );
 is( $m->invalid_row_count, 3, 'got expected number of invalid rows (3)' );
 

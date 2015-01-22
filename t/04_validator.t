@@ -20,9 +20,9 @@ throws_ok { $v->validate } qr/must supply a Bio::Metadata::Manifest/,
   'exception when calling "validate" without a manifest';
 
 # check an input file
-my $config = Bio::Metadata::Config->new( config_file => 't/data/01_single.conf' );
+my $config = Bio::Metadata::Config->new( config_file => 't/data/04_manifest.conf' );
 my $reader = Bio::Metadata::Reader->new( config => $config );
-my $manifest = $reader->read_csv('t/data/01_broken_manifest.csv');
+my $manifest = $reader->read_csv('t/data/04_broken_manifest.csv');
 
 is( $v->validate($manifest), 0, 'broken manifest is invalid' );
 
@@ -50,7 +50,7 @@ like( $manifest->invalid_rows->[1]->[2], qr/^\[errors found on row 2\]/, 'flags 
 like( $manifest->invalid_rows->[1]->[2], qr/\[value in field 'one' is not valid; field description: 'Testing description'\]/, 'invalid column flagged without description' );
 
 # check everything works with a working config and manifest
-$manifest = $reader->read_csv('t/data/01_working_manifest.csv');
+$manifest = $reader->read_csv('t/data/04_working_manifest.csv');
 ok( $v->validate($manifest), 'valid input file marked as valid' );
 
 is( $manifest->is_invalid, 0, 'manifest "is_invalid" flag correctly shows 0' );
