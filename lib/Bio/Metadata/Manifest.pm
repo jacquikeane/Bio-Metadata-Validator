@@ -4,6 +4,7 @@ package Bio::Metadata::Manifest;
 # ABSTRACT: class for working with manifest metadata
 
 use Moose;
+use Moose::Util::TypeConstraints;
 use namespace::autoclean;
 
 use File::Slurp qw( write_file );
@@ -22,25 +23,12 @@ path-help@sanger.ac.uk
 
 # public attributes
 
-=attr config
-
-configuration object (L<Bio::Metadata::Config>); B<Read-only>; specify at
-instantiation
-
-=cut
-
 has 'config' => (
   is       => 'ro',
   isa      => 'Bio::Metadata::Config',
   required => 1,
   handles  => [ 'field_names', 'fields' ],
 );
-
-=attr rows
-
-reference to an array containing the rows in this manifest
-
-=cut
 
 has 'rows' => (
   traits  => ['Array'],
@@ -57,14 +45,6 @@ has 'rows' => (
   },
 );
 
-=attr invalid_rows
-
-reference to an array containing the invalid rows in this manifest. The invalid
-rows are inserted at the same position in the original array, meaning that this
-array will have C<undef> at positions where the original row is valid.
-
-=cut
-
 has 'invalid_rows' => (
   traits  => ['Array'],
   is      => 'rw',
@@ -78,6 +58,41 @@ has 'invalid_rows' => (
   },
 );
 
+subtype 'MD5',
+  as 'Str',
+  where { $_ =~ m/^[0-9a-f]{32}$/ };
+
+subtype 'UUID',
+  as 'Str',
+  where { $_ =~ m/^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/i };
+
+has 'md5' => ( is => 'rw', isa => 'MD5' );
+has 'uuid' => ( is => 'rw', isa => 'UUID' );
+has 'filename' => ( is => 'ro', isa => 'Str' );
+
+=attr config
+
+configuration object (L<Bio::Metadata::Config>); B<Read-only>; specify at
+instantiation
+
+=attr rows
+
+reference to an array containing the rows in this manifest
+
+=attr invalid_rows
+
+reference to an array containing the invalid rows in this manifest. The invalid
+rows are inserted at the same position in the original array, meaning that this
+array will have C<undef> at positions where the original row is valid.
+
+=attr md5
+
+MD5 checksum value for the file from which the manifest was loaded.
+
+=attr uuid
+
+a UUID, as generated using L<Data::UUID>, for this manifest.
+
 =attr filename
 
 name of the file from which the manifest was loaded; B<Read-only>; specify
@@ -87,8 +102,6 @@ B<Note> that the filename is only stored on the object. Use L<add_row> to add
 rows to the manifest.
 
 =cut
-
-has 'filename' => ( is => 'ro', isa => 'Str' );
 
 #-------------------------------------------------------------------------------
 #- public methods --------------------------------------------------------------

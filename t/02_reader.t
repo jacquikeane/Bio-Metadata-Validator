@@ -35,6 +35,11 @@ ok( $manifest = $r->read_csv('t/data/01_working_manifest.csv'), '"read" works wi
 isa_ok( $manifest, 'Bio::Metadata::Manifest' );
 
 is( $manifest->row_count, 2, 'got expected number of rows in manifest' );
+is( $manifest->rows->[0]->[0], 1, 'got expected value on first row of manifest' );
+is( $manifest->rows->[1]->[1], 'two', 'got expected value on second row of manifest' );
+
+is( $manifest->md5, '7338dce1b4984feb4a2fee7a0822d049', 'MD5 checksum correctly set' );
+like( $manifest->uuid, qr/^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/i, 'UUID correctly set' );
 
 done_testing();
 

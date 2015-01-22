@@ -21,6 +21,14 @@ my $config = Bio::Metadata::Config->new( config_file => 't/data/01_single.conf' 
 lives_ok { $m = Bio::Metadata::Manifest->new( config => $config ) }
    'no exception when instantiating with a config';
 
+throws_ok { $m->md5('xxxxxxxxxxx') }
+  qr/Attribute \(md5\) does not pass the type constraint/, 'exception when setting an invalid MD5';
+lives_ok  { $m->md5('6df23dc03f9b54cc38a0fc1483df6e21') } 'no error when setting a valid MD5';
+
+throws_ok { $m->uuid('xxxxxxxxxxx') }
+  qr/Attribute \(uuid\) does not pass the type constraint/, 'exception when setting an invalid uuid';
+lives_ok  { $m->uuid('4162F712-1DD2-11B2-B17E-C09EFE1DC403') } 'no error when setting a valid uuid';
+
 my $expected_field_defs = [
   { name => 'one', type => 'Bool', description => 'Testing description' },
   { name => 'two', type => 'Str' },

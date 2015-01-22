@@ -7,6 +7,8 @@ use Moose;
 use namespace::autoclean;
 
 use Text::CSV;
+use Digest::MD5;
+use Data::UUID;
 
 use Bio::Metadata::Config;
 use Bio::Metadata::Manifest;
@@ -66,10 +68,16 @@ sub read_csv {
 
   my $manifest = Bio::Metadata::Manifest->new( config => $self->config );
 
+  # calculate an MD5 and a UUID for the file
+  my $digest = Digest::MD5->new;
+  my $du = Data::UUID->new;
+
   my $row_num = 0;
 
   ROW: while ( my $row_string = <$fh> ) {
     $row_num++;
+
+    $digest->add($row_string);
 
     # try to skip the header row, if present, and blank rows
     if ( $row_num == 1 and ( $row_string =~ m/^$header/ or $row_string =~ m/^\,+$/ ) ) {
@@ -86,6 +94,9 @@ sub read_csv {
     my @raw_values = $csv->fields;
     $manifest->add_row( \@raw_values );
   }
+
+  $manifest->md5( $digest->hexdigest );
+  $manifest->uuid( $du->create_str );
 
   return $manifest;
 }
