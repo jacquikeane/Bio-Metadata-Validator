@@ -6,7 +6,7 @@ package Bio::Metadata::Reader;
 use Moose;
 use namespace::autoclean;
 
-use Text::CSV;
+use Text::CSV_XS;
 use Digest::MD5;
 use Data::UUID;
 
@@ -62,7 +62,13 @@ sub read_csv {
   # get the header row from the config
   my $header = substr( $self->config->{header_row} || '', 0, 20 );
 
-  my $csv = Text::CSV->new;
+  # add a flag to Text::CSV_XS to tell it to parse blank fields in the CSV
+  # as undef, rather than "". This is important because when we come to load
+  # the row into a DB, DBIC needs empty fields to be undef so that they get
+  # correctly translated as NULL in the SQL. 
+  # NOTE: this switch doesn't seem to work with Text::CSV, only with the
+  # XS version.
+  my $csv = Text::CSV_XS->new( { blank_is_undef => 1 } );
   open my $fh, '<:encoding(utf8)', $file
     or die "ERROR: problems reading input CSV file: $!";
 
