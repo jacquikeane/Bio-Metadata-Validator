@@ -45,16 +45,16 @@ has 'rows' => (
   },
 );
 
-has 'invalid_rows' => (
+has 'row_errors' => (
   traits  => ['Array'],
   is      => 'rw',
-  isa     => 'ArrayRef[ArrayRef]',
+  isa     => 'ArrayRef[Str]',
   default => sub { [] },
   handles => {
-    all_invalid_rows => 'elements',
-    get_invalid_row  => 'get',
-    set_invalid_row  => 'set',
-    reset            => 'clear',
+    all_row_errors => 'elements',
+    get_row_error  => 'get',
+    set_row_error  => 'set',
+    reset          => 'clear',
   },
 );
 
@@ -79,11 +79,12 @@ instantiation
 
 reference to an array containing the rows in this manifest
 
-=attr invalid_rows
+=attr row_errors
 
-reference to an array containing the invalid rows in this manifest. The invalid
-rows are inserted at the same position in the original array, meaning that this
-array will have C<undef> at positions where the original row is valid.
+reference to an array containing the error messages for the invalid rows in
+this manifest. The rows errors are inserted at the same position as the
+corresponding invalid row, meaning that this array will have C<undef> at
+positions where the original row is valid.
 
 =attr md5
 
@@ -136,31 +137,26 @@ the manifest by 1.
 
 Returns the number of rows in the manifest.
 
-=head2 add_invalid_row($row)
+=head2 all_row_errors
 
-Adds an invalid row to the manifest. The C<$row> should be a reference to a
-list of field values.
+Returns all of the error messages for invalid rows in the manifest as an array
+(as opposed to an array ref).
 
-=head2 all_invalid_rows
+=head2 get_row_error($index)
 
-Returns all of the invalid rows in the manifest as an array (as opposed to
-an array ref).
+Returns the error message for the specified row, or C<undef> if there is no
+error for the specified row. Note that the row index is zero-based when calling
+this method, i.e. the first row in the manifest is 0, not 1.
 
-=head2 get_invalid_row($index)
+=head2 set_row_error($index, $err_msg)
 
-Returns a reference to the specified invalid row array. Note that the row index
-is zero-based when calling this method, i.e. the first row in the manifest is
-0, not 1.
-
-=head2 set_invalid_row($index, $row)
-
-Sets the specified row in the list of invalid rows in this manifest. Note that
-the row index is zero-based when calling this method, i.e. the first row in the
-manifest is 0, not 1.
+Adds the given error message for the specified row. Note that the row index is
+zero-based when calling this method, i.e. the first row in the manifest is 0,
+not 1.
 
 =head2 reset
 
-Deletes the validated and invalid rows from the manifest.
+Resets the manifest by deleting the error messages for invalid rows.
 
 =head2 invalid_row_count
 
@@ -174,7 +170,7 @@ sub invalid_row_count {
   my $self = shift;
 
   my $count = 0;
-  foreach my $row ( @{$self->invalid_rows} ) {
+  foreach my $row ( @{$self->row_errors} ) {
     $count++ if defined $row;
   }
   return $count;
@@ -200,6 +196,22 @@ sub is_invalid { shift->has_invalid_rows }
 
 #-------------------------------------------------------------------------------
 
+=head2 get_csv($invalid_only)
+
+Returns the current manifest in CSV format as a string. If C<$invalid_only> is
+set to true, only invalid rows will be included. The header row will always be
+included as the first line of the CSV string.
+
+=cut
+
+sub get_csv {
+  my ( $self, $invalid_only ) = @_;
+  my $csv = join "\n", $self->get_csv_rows($invalid_only);
+  return "$csv\n";
+}
+
+#-------------------------------------------------------------------------------
+
 =head2 write_csv($filename, $invalid_only)
 
 Writes the current manifest as a CSV file with the specified filename. If
@@ -210,32 +222,45 @@ file.
 
 sub write_csv {
   my ( $self, $filename, $invalid_only ) = @_;
+  my $csv = join "\n", $self->get_csv_rows($invalid_only);
+  write_file( $filename, "$csv\n" );
+}
 
-  my @rows = ( $self->config->get('header_row') . "\n" );
+#-------------------------------------------------------------------------------
 
-  if ( $invalid_only ) {
-    foreach my $row ( $self->all_invalid_rows ) {
-      next unless defined $row;
-      push @rows, join(',', @$row) . "\n";
+=head2 get_csv_rows($invalid_only)
+
+Returns an array containing the rows of the current manifest in CSV format.  If
+C<$invalid_only> is set to true, only invalid rows will be included. The header
+row will always be included as the first row of the array.
+
+=cut
+
+sub get_csv_rows {
+  my ( $self, $invalid_only ) = @_;
+
+  # put the header line into the output CSV first
+  my @rows = ( $self->config->get('header_row') );
+
+  my $n = 0;
+  foreach my $row ( $self->all_rows ) {
+    my $row_string = join ',', @$row;
+
+    # append any error messages to the row
+    my $invalid_row = $self->get_row_error($n);
+    $row_string .= ",$invalid_row" if $invalid_row;
+
+    if ( $invalid_only ) {
+      push @rows, $row_string if $invalid_row;
     }
-  }
-  else {
-    my $n = 0;
-    foreach my $row ( $self->all_rows ) {
-      my $row_string = join ',', @$row;
-
-      # interleave the invalid rows
-      if ( my $invalid_row = $self->get_invalid_row($n) ) {
-        # append the error message to the CSV row string
-        $row_string .= ',' . $invalid_row->[-1];
-      }
-
-      push @rows, "$row_string\n";
-      $n++;
+    else {
+      push @rows, $row_string;
     }
+
+    $n++;
   }
 
-  write_file( $filename, @rows );
+  return @rows;
 }
 
 #-------------------------------------------------------------------------------

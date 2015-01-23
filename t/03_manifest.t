@@ -39,7 +39,7 @@ is_deeply( $m->fields,      $expected_field_defs,  'got expected fields from con
 is_deeply( $m->field_names, $expected_field_names, 'got expected field names from config via manifest' );
 
 $m->add_rows( [ 1, 2 ], [ 3, 4 ], [ 5, 6 ] );
-$m->set_invalid_row( 2, [ 5, 6, '[error message]' ] );
+$m->set_row_error( 2, '[error message]' );
 
 is( $m->row_count, 3, 'starting with 3 rows' );
 is( $m->invalid_row_count, 1, 'starting with one invalid row' );
@@ -54,14 +54,14 @@ $m->write_csv( $all_fh->filename );
 
 my $file_contents = read_file( $all_fh->filename );
 
-my $expected_contents = <<EOF;
+my $expected_csv = <<EOF;
 one,two
 1,2
 3,4
 5,6,[error message]
 EOF
 
-is( $file_contents, $expected_contents, 'output file is correct' );
+is( $file_contents, $expected_csv, 'full output file is correct' );
 
 my $invalid_fh = File::Temp->new;
 $invalid_fh->close;
@@ -72,12 +72,22 @@ $m->write_csv( $invalid_fh->filename, 1 );
 
 $file_contents = read_file( $invalid_fh->filename );
 
-$expected_contents = <<EOF;
+$expected_csv = <<EOF;
 one,two
 5,6,[error message]
 EOF
 
-is( $file_contents, $expected_contents, 'output file is correct' );
+is( $file_contents, $expected_csv, 'errors-only output file is correct' );
+
+is( $m->get_csv(1), $expected_csv, 'CSV string from get_csv is correct' );
+
+my $expected_rows = [
+  'one,two',
+  '5,6,[error message]',
+];
+
+my @rows = $m->get_csv_rows(1);
+is_deeply( \@rows, $expected_rows, 'CSV rows array is as expected' );
 
 $m->reset;
 

@@ -40,11 +40,11 @@ my $m = $r->read_csv('t/data/05_int.csv');
 
 is( $v->validate($m), 0, 'found invalid Int fields in test CSV' );
 
-like( $m->invalid_rows->[0]->[-1], qr/value in field 'int' is not valid/, 'error with field that fails basic test for integer' );
-like( $m->invalid_rows->[1]->[-1], qr/value in field 'top_limit' is not valid/, 'error with int > limit' );
-like( $m->invalid_rows->[2]->[-1], qr/value in field 'bottom_limit' is not valid/, 'error with int < limit' );
-like( $m->invalid_rows->[3]->[-1], qr/value in field 'bound' is not valid/, 'error with int < lower bound' );
-like( $m->invalid_rows->[4]->[-1], qr/value in field 'bound' is not valid/, 'error with int > upper bound' );
+like( $m->row_errors->[0], qr/value in field 'int' is not valid/, 'error with field that fails basic test for integer' );
+like( $m->row_errors->[1], qr/value in field 'top_limit' is not valid/, 'error with int > limit' );
+like( $m->row_errors->[2], qr/value in field 'bottom_limit' is not valid/, 'error with int < limit' );
+like( $m->row_errors->[3], qr/value in field 'bound' is not valid/, 'error with int < lower bound' );
+like( $m->row_errors->[4], qr/value in field 'bound' is not valid/, 'error with int > upper bound' );
 
 is  ( Bio::Metadata::Validator::Plugin::Str->validate( 'a'   ), 1, '"Str" validates "a" correctly' );
 is  ( Bio::Metadata::Validator::Plugin::Str->validate( 'abc' ), 1, '"Str" validates "abc" correctly' );
@@ -67,7 +67,7 @@ $m = $r->read_csv('t/data/05_str.csv');
 is( $v->validate($m), 0, 'found invalid Str fields in test CSV' );
 
 is( $m->invalid_row_count, 1, 'got expected number of invalid rows' );
-like( $m->invalid_rows->[7]->[-1], qr/\[errors found on row 8\] \[value in field 'amr_regex'/,
+like( $m->row_errors->[7], qr/\[errors found on row 8\] \[value in field 'amr_regex'/,
   'error with invalid AMR string' );
 
 is  ( Bio::Metadata::Validator::Plugin::Enum->validate( 'ABC', { values => [ qw( ABC DEF ) ] } ), 1, '"Enum" validates "ABC" correctly' );
@@ -111,14 +111,14 @@ SKIP: {
 
   is( $v->validate($m), 0, 'file is marked as invalid when parsing CSV bad ontology field' );
 
-  like( $m->invalid_rows->[0]->[-1], qr/errors found on row 1] \[value in field 'envo_term' is not valid/, 'error with bad ontology field' );
-  like( $m->invalid_rows->[2]->[-1], qr/errors found on row 3] \[value in field 'envo_term' is not valid/, 'error with invalid EnvO term' );
-  like( $m->invalid_rows->[4]->[-1], qr/errors found on row 5] \[value in field 'gaz_term' is not valid/, 'error with invalid GAZ field' );
-  like( $m->invalid_rows->[6]->[-1], qr/errors found on row 7] \[value in field 'bto_term' is not valid/, 'error with invalid BRENDA field' );
+  like( $m->row_errors->[0], qr/errors found on row 1] \[value in field 'envo_term' is not valid/, 'error with bad ontology field' );
+  like( $m->row_errors->[2], qr/errors found on row 3] \[value in field 'envo_term' is not valid/, 'error with invalid EnvO term' );
+  like( $m->row_errors->[4], qr/errors found on row 5] \[value in field 'gaz_term' is not valid/, 'error with invalid GAZ field' );
+  like( $m->row_errors->[6], qr/errors found on row 7] \[value in field 'bto_term' is not valid/, 'error with invalid BRENDA field' );
 
-  is( $m->invalid_rows->[1]->[-1], undef, 'no error with valid EnvO term' );
-  is( $m->invalid_rows->[3]->[-1], undef, 'no error with valid gaz term' );
-  is( $m->invalid_rows->[5]->[-1], undef, 'no error with valid BRENDA term' );
+  is( $m->row_errors->[1], undef, 'no error with valid EnvO term' );
+  is( $m->row_errors->[3], undef, 'no error with valid gaz term' );
+  is( $m->row_errors->[5], undef, 'no error with valid BRENDA term' );
 }
 
 done_testing;

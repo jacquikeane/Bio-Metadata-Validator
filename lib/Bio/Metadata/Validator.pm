@@ -124,20 +124,14 @@ sub validate {
     }
 
     if ( $row_errors ) {
-      # since we're pushing the error message onto the invalid rows, we need to
-      # clone the row values, otherwise, if we just stored the reference to the
-      # row in list of invalid rows, we'd have the error message on the original
-      # rows
-      my @invalid_row = @$row;
 
       # add the row number to the error message
-      $row_errors =~ s/^\s+|\s+$//g;
+      $row_errors =~ s/^\s+|\s+$//g; # strip leading and trailing space
       $row_errors = "[errors found on row $row_num] $row_errors";
-      push @invalid_row, $row_errors;
 
       # push the row into the array. The row number is 1-based though, to make
       # it easier to read the error messages. Make the count zero-based...
-      $manifest->set_invalid_row( $row_num - 1, \@invalid_row );
+      $manifest->set_row_error( $row_num - 1, $row_errors );
     }
   }
 
@@ -223,7 +217,7 @@ sub _validate_row {
     if ( not defined $field_value or $field_value =~ m/^\s*$/ ) {
       if ( defined $field_definition->{required} and
            $field_definition->{required} ) {
-        $$row_errors_ref .= "[field '$field_name' is a required field] ";
+        $$row_errors_ref .= "['$field_name' is a required field] ";
       }
       next FIELD;
     }
