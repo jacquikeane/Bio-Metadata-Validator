@@ -176,7 +176,7 @@ sub fields {
 =head2 field_names
 
 Returns a reference to an array containing the field names in the current
-config.
+config, in the order in which they appear in the configuration.
 
 =cut
 
