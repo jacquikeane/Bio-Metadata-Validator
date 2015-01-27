@@ -8,6 +8,7 @@ use namespace::autoclean;
 
 use Config::General;
 use TryCatch;
+use File::Slurp qw( read_file );
 
 =head1 NAME
 
@@ -59,7 +60,8 @@ the current active configuration. B<Read-only>; set internally
 =cut
 
 # private attributes
-has '_full_config' => ( is => 'rw', isa => 'HashRef' );
+has '_full_config'   => ( is => 'rw', isa => 'HashRef' );
+has '_config_string' => ( is => 'rw', isa => 'Str' );
 
 #---------------------------------------
 
@@ -73,9 +75,12 @@ sub _set_config_file {
     unless -e $self->config_file;
 
   # load the config
+  my $config_string = read_file( $self->config_file );
+  $self->_config_string($config_string);
+
   my $cg;
   try {
-    $cg = Config::General->new( -ConfigFile => $self->config_file );
+    $cg = Config::General->new( -String => $config_string );
   }
   catch ( $e ) {
     die 'ERROR: could not load configuration file (' . $self->config_file . "): $e";

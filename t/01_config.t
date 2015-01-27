@@ -5,6 +5,7 @@ use warnings;
 
 use Test::More;
 use Test::Exception;
+use Digest::MD5 qw( md5_hex );
 
 use_ok('Bio::Metadata::Config');
 
@@ -27,6 +28,9 @@ my $c;
 lives_ok { $c = Bio::Metadata::Config->new( config_file => 't/data/01_single.conf', config_name => 'one' ) }
   'no exception with config file with a single config';
 is( $c->config->{field}->[0]->{type}, 'Bool', 'specified config sets correct type (Bool) for field' );
+
+my $md5 = md5_hex($c->_config_string);
+is( $md5, 'beb30861311db39a5e8824ce4caeab0e', 'saved correct config string on object' );
 
 # specify a config but not a name
 lives_ok { $c = Bio::Metadata::Config->new( config_file => 't/data/01_single.conf' ) }
