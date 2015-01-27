@@ -135,6 +135,10 @@ sub validate {
     }
   }
 
+  # clean up the book-keeping hash keys that we put into the config as we do
+  # the validation
+  delete $_->{__col_num} for ( @{ $manifest->config->fields } );
+
   return $manifest->has_invalid_rows ? 0 : 1;
 }
 
@@ -203,7 +207,7 @@ sub _validate_row {
     # retrieve the definition for this particular field, and add in its column
     # number for later
     my $field_definition = $self->_config->get('field')->[$i];
-    $field_definition->{col_num} = $i;
+    $field_definition->{__col_num} = $i;
 
     my $field_name  = $field_definition->{name};
     my $field_type  = $field_definition->{type};
@@ -307,7 +311,7 @@ sub _validate_if_dependencies {
     # there are no valid fields in the "else" columns.
 
     # look up the column number for the field
-    my $if_col_num = $field_definition->{col_num};
+    my $if_col_num = $field_definition->{__col_num};
 
     # work around the Config::General behaviour of single element arrays vs
     # scalars

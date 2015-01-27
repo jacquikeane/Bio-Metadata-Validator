@@ -9,6 +9,7 @@ use File::Slurp;
 use Test::Output;
 use Test::CacheFile;
 use File::Temp;
+use Clone qw( clone );
 
 use_ok('Bio::Metadata::Validator');
 
@@ -24,7 +25,10 @@ my $config = Bio::Metadata::Config->new( config_file => 't/data/04_manifest.conf
 my $reader = Bio::Metadata::Reader->new( config => $config );
 my $manifest = $reader->read_csv('t/data/04_broken_manifest.csv');
 
+# check that we haven't changed the config object during validation
+my $cloned_config = clone $manifest->config;
 is( $v->validate($manifest), 0, 'broken manifest is invalid' );
+is_deeply( $manifest->config, $cloned_config, 'config unaltered by validation' );
 
 is( $v->_config->get('field')->[0]->{type}, 'Bool', 'config sets correct type (Bool) for field' );
 
