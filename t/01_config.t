@@ -12,14 +12,14 @@ use_ok('Bio::Metadata::Config');
 # check the configuration file/string
 
 throws_ok { Bio::Metadata::Config->new() }
-  qr/Attribute \(config_file\) is required /, 'exception on missing configuration file';
+  qr/must supply either /, 'exception on missing configuration file';
 
 my $nef = "non-existent-file-$$";
 throws_ok { Bio::Metadata::Config->new( config_file => $nef, config_name => 'dummy' ) }
   qr/could not find the specified configuration file/, 'exception on missing config file';
 
 throws_ok { Bio::Metadata::Config->new( config_file => 't/data/01_broken.conf', config_name => 'broken' ) }
-  qr/could not load configuration file/, 'exception on invalid config file';
+  qr/could not load configuration/, 'exception on invalid config file';
 
 # finally, load a valid configuration file
 
@@ -29,7 +29,7 @@ lives_ok { $c = Bio::Metadata::Config->new( config_file => 't/data/01_single.con
   'no exception with config file with a single config';
 is( $c->config->{field}->[0]->{type}, 'Bool', 'specified config sets correct type (Bool) for field' );
 
-my $md5 = md5_hex($c->_config_string);
+my $md5 = md5_hex($c->config_string);
 is( $md5, 'beb30861311db39a5e8824ce4caeab0e', 'saved correct config string on object' );
 
 # specify a config but not a name
@@ -51,6 +51,31 @@ my $expected_names  = [ 'two', 'dummy' ];
 
 is_deeply( $c->fields,      $expected_fields, 'got expected data structure from "fields"' );
 is_deeply( $c->field_names, $expected_names,  'got expected data structure from "field_names"' );
+
+my $config_string = <<EOF_config;
+<checklist one>
+  header_row "one,two"
+  <field>
+    name         one
+    description  Testing description
+    type         Bool
+  </field>
+  <field>
+    name         two
+    type         Str
+  </field>
+</checklist>
+EOF_config
+
+# reset the original config object using a file and compare it to a new config object
+# created using a string
+$c = Bio::Metadata::Config->new( config_file => 't/data/01_single.conf' );
+
+my $new_c;
+lives_ok { $new_c = Bio::Metadata::Config->new( config_string => $config_string ) }
+  'no exception when loading config string';
+
+is_deeply( $c->_full_config, $new_c->_full_config, 'got expected config when loading from a string' );
 
 done_testing();
 
