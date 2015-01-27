@@ -8,6 +8,7 @@ use Moose::Util::TypeConstraints;
 use namespace::autoclean;
 
 use File::Slurp qw( write_file );
+use Data::UUID;
 
 =head1 NAME
 
@@ -103,6 +104,17 @@ B<Note> that the filename is only stored on the object. Use L<add_row> to add
 rows to the manifest.
 
 =cut
+
+#-------------------------------------------------------------------------------
+#- construction ----------------------------------------------------------------
+#-------------------------------------------------------------------------------
+
+sub BUILD {
+  my $self = shift;
+
+  # if a UUID wasn't passed in when the object was created, generate one now
+  $self->uuid( Data::UUID->new->create_str ) unless defined $self->uuid;
+}
 
 #-------------------------------------------------------------------------------
 #- public methods --------------------------------------------------------------

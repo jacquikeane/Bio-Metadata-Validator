@@ -9,6 +9,7 @@ use File::Temp;
 use File::Slurp qw( read_file );
 
 use Bio::Metadata::Config;
+use Bio::Metadata::Reader
 
 use_ok('Bio::Metadata::Manifest');
 
@@ -25,6 +26,7 @@ throws_ok { $m->md5('xxxxxxxxxxx') }
   qr/Attribute \(md5\) does not pass the type constraint/, 'exception when setting an invalid MD5';
 lives_ok  { $m->md5('6df23dc03f9b54cc38a0fc1483df6e21') } 'no error when setting a valid MD5';
 
+like( $m->uuid, qr/^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/i, 'auto-generated UUID is valid' );
 throws_ok { $m->uuid('xxxxxxxxxxx') }
   qr/Attribute \(uuid\) does not pass the type constraint/, 'exception when setting an invalid uuid';
 lives_ok  { $m->uuid('4162F712-1DD2-11B2-B17E-C09EFE1DC403') } 'no error when setting a valid uuid';
@@ -94,6 +96,23 @@ $m->reset;
 is( $m->row_count, 3, 'still 3 rows' );
 is( $m->has_invalid_rows, 0, 'no invalid rows' );
 is( $m->is_invalid, 0, '"is_invalid" correctly shows false' );
+
+# check that the Manifest that we get when we hand in a "rows" array ref
+# is the same as the Manifest that we get when reading a file
+
+my $r = Bio::Metadata::Reader->new( config => $config );
+my $read_manifest = $r->read_csv('t/data/03_manifest.csv');
+
+my $manifest_rows = [[1, 2], [3, 4], [5, 6]];
+my $built_manifest = Bio::Metadata::Manifest->new( config => $config, rows => $manifest_rows );
+
+# spoof the MD5 and UUID, which will necessarily differ between the two objects
+# otherwise
+$built_manifest->md5( $read_manifest->md5 );
+$built_manifest->uuid( $read_manifest->uuid );
+
+is_deeply( $read_manifest, $built_manifest, 'built manifest matches read manifest' );
+
 
 done_testing();
 

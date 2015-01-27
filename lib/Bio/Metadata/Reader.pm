@@ -8,7 +8,6 @@ use namespace::autoclean;
 
 use Text::CSV_XS;
 use Digest::MD5;
-use Data::UUID;
 
 use Bio::Metadata::Config;
 use Bio::Metadata::Manifest;
@@ -51,6 +50,13 @@ reference to the original config object.
 
 =head1 METHODS
 
+=head2 read_csv($file)
+
+Reads a manifest from the given file and returns a L<Bio::Metadata::Manifest>.
+As the file is read an MD5 checksum is generated and set on the
+L<Bio::Metadata::Manifest|Manifest>. We rely on the
+L<Bio::Metadata::Manifest|Manifest> itself to create a UUID.
+
 =cut
 
 sub read_csv {
@@ -65,7 +71,7 @@ sub read_csv {
   # add a flag to Text::CSV_XS to tell it to parse blank fields in the CSV
   # as undef, rather than "". This is important because when we come to load
   # the row into a DB, DBIC needs empty fields to be undef so that they get
-  # correctly translated as NULL in the SQL. 
+  # correctly translated as NULL in the SQL.
   # NOTE: this switch doesn't seem to work with Text::CSV, only with the
   # XS version.
   my $csv = Text::CSV_XS->new( { blank_is_undef => 1 } );
@@ -74,9 +80,8 @@ sub read_csv {
 
   my $manifest = Bio::Metadata::Manifest->new( config => $self->config );
 
-  # calculate an MD5 and a UUID for the file
+  # calculate an MD5 digest for the file
   my $digest = Digest::MD5->new;
-  my $du = Data::UUID->new;
 
   my $row_num = 0;
 
@@ -102,7 +107,6 @@ sub read_csv {
   }
 
   $manifest->md5( $digest->hexdigest );
-  $manifest->uuid( $du->create_str );
 
   return $manifest;
 }
