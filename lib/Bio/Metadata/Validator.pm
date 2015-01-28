@@ -18,10 +18,6 @@ use Bio::Metadata::Reader;
 use Bio::Metadata::Manifest;
 use Bio::Metadata::Validator::Exception;
 
-=head1 NAME
-
-Bio::Metadata::Validator
-
 =head1 SYNOPSIS
 
  # create a config object

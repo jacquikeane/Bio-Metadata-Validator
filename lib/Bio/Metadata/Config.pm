@@ -11,16 +11,6 @@ use Carp qw( croak );
 use TryCatch;
 use File::Slurp qw( read_file );
 
-=head1 NAME
-
-Bio::Metadata::Config
-
-=head1 CONTACT
-
-path-help@sanger.ac.uk
-
-=cut
-
 #-------------------------------------------------------------------------------
 
 # public attributes
@@ -198,6 +188,12 @@ sub field_names {
 # none
 
 #-------------------------------------------------------------------------------
+
+=head1 CONTACT
+
+path-help@sanger.ac.uk
+
+=cut
 
 __PACKAGE__->meta->make_immutable;
 
