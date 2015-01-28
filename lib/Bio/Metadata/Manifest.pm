@@ -4,15 +4,11 @@ package Bio::Metadata::Manifest;
 # ABSTRACT: class for working with manifest metadata
 
 use Moose;
-use Moose::Util::TypeConstraints;
 use namespace::autoclean;
 
 use File::Slurp qw( write_file );
 use Data::UUID;
-
-=head1 NAME
-
-Bio::Metadata::Manifest
+use Bio::Metadata::Types;
 
 =head1 CONTACT
 
@@ -58,14 +54,6 @@ has 'row_errors' => (
     reset          => 'clear',
   },
 );
-
-subtype 'MD5',
-  as 'Str',
-  where { $_ =~ m/^[0-9a-f]{32}$/ };
-
-subtype 'UUID',
-  as 'Str',
-  where { $_ =~ m/^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/i };
 
 has 'md5' => ( is => 'rw', isa => 'MD5' );
 has 'uuid' => ( is => 'rw', isa => 'UUID' );
