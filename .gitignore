@@ -24,6 +24,7 @@ nytprof.out
 /pm_to_blib
 *.o
 *.bs
+.prove
 
 # OSX files
 .DS_Store
