@@ -15,22 +15,22 @@ path-help@sanger.ac.uk
 
 #-------------------------------------------------------------------------------
 
-subtype 'MD5',
+subtype 'Bio::Metadata::Types::MD5',
   as 'Str',
   where { m/^[0-9a-f]{32}$/i },
   message { 'Not a valid MD5 checksum' };
 
-subtype 'UUID',
+subtype 'Bio::Metadata::Types::UUID',
   as 'Str',
   where { m/^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/i },
   message { 'Not a valid UUID' };
 
-subtype 'AntimicrobialName',
+subtype 'Bio::Metadata::Types::AntimicrobialName',
   as 'Str',
   where { m/^[A-Za-z0-9\-\(\)\s]+$/ },
   message { 'Not a valid antimicrobial compound name' };
 
-subtype 'SIRTerm',
+subtype 'Bio::Metadata::Types::SIRTerm',
   as 'Str',
   where { m/^[SIR]$/ },
   message { 'Not a valid susceptibility term' };

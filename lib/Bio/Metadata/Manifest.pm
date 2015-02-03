@@ -55,8 +55,8 @@ has 'row_errors' => (
   },
 );
 
-has 'md5' => ( is => 'rw', isa => 'MD5' );
-has 'uuid' => ( is => 'rw', isa => 'UUID' );
+has 'md5' => ( is => 'rw', isa => 'Bio::Metadata::Types::MD5' );
+has 'uuid' => ( is => 'rw', isa => 'Bio::Metadata::Types::UUID' );
 has 'filename' => ( is => 'ro', isa => 'Str' );
 
 =attr config
