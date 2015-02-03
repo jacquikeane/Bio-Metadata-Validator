@@ -244,7 +244,12 @@ sub get_csv_rows {
 
   my $n = 0;
   foreach my $row ( $self->all_rows ) {
-    my $row_string = join ',', @$row;
+    my $row_string;
+    # turn off warnings before trying to join an array with undefs
+    {
+      no warnings;
+      $row_string = join ',', @$row;
+    }
 
     # append any error messages to the row
     my $invalid_row = $self->get_row_error($n);
