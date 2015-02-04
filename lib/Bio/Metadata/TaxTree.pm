@@ -1,20 +1,31 @@
 
-package Bio::Metadata::TaxonomyLoader;
+package Bio::Metadata::TaxTree;
 
-# ABSTRACT: class for reading and loading NCBI taxonomy tree dumps
+# ABSTRACT: read and load NCBI taxonomy tree dumps
 
 use Moose;
 use namespace::autoclean;
-use Moose::Util::TypeConstraints;
 
 use Carp qw( croak );
 use Tree::Simple;
 
-use Bio::Metadata::Types;
-
 =head1 CONTACT
 
 path-help@sanger.ac.uk
+
+=head1 SYNOPSIS
+
+ # read names.dmp and nodes.dmp
+ my $tl = Bio::Metadata::TaxTree->new( names_file => 'names.dmp', nodes_file => 'nodes.dmp' );
+
+ # build the tree (calculate "lft" and "rgt" values for tree traversal)
+ my $tree = $tl->build_tree;
+
+ # get the values of the nodes in tree-order
+ my $nodes = $tl->get_node_values(1);
+ foreach my $node ( @$nodes ) {
+   print join( ' | ', @$node ), "\n";
+ }
 
 =cut
 
@@ -55,9 +66,9 @@ has 'nodes_file' => (
 =attr nodes
 
 reference to an array containing the nodes of the tree, indexed by tax ID. Each
-node is a L<Tree::Simple> object. B<Note> that because there is (or shouldn't
-be) a node in the taxonomy tree with tax ID zero, the first slot of the array
-returned by C<$tree->nodes> will be empty. B<Read-only>.
+node is a L<Tree::Simple> object. B<Note> that because there isn't (or
+shouldn't be) a node in the taxonomy tree with tax ID zero, the first slot of
+the array returned by C<$tree->nodes> will be empty (undef). B<Read-only>.
 
 =cut
 
@@ -72,7 +83,7 @@ has 'nodes' => (
 =attr tree
 
 reference to the L<Tree::Simple> object that represents the root node of the
-tree.
+tree. B<Read-only>.
 
 =cut
 
@@ -206,6 +217,37 @@ sub build_tree {
 
 #-------------------------------------------------------------------------------
 
+=head2 get_node_values($in_tree_order)
+
+returns a reference to an array containing the nodes of the tree, with each
+row represented as an array of node attributes. The attributes are stored in
+the following order:
+
+=over 4
+
+=item tax_id
+
+=item name
+
+=item lft
+
+=item rgt
+
+=item parent_tax_id
+
+=back
+
+B<Note> that if C<build_tree> has not been run, the values of C<lft> and
+C<rgt> will be C<undef>.
+
+If C<$in_tree_order> is true, the nodes are returned in the order in which
+they are found in the tree, i.e. through a depth-first traversal of the
+tree using L<Tree::Simple::traverse>. If C<$in_tree_order> is false, nodes
+are returned in the order in which they were read in from the original
+C<nodes.dmp> file.
+
+=cut
+
 sub get_node_values {
   my ( $self, $in_tree_order ) = @_;
 
@@ -245,8 +287,12 @@ sub get_node_values {
 }
 
 #-------------------------------------------------------------------------------
+#- private methods -------------------------------------------------------------
+#-------------------------------------------------------------------------------
 
-sub load_tree {
+# convenient method to print the nodes of the tree row-by-row in tree traversal
+# order
+sub _print_tree {
   my $self = shift;
 
   $self->tree->traverse( sub {
@@ -261,10 +307,6 @@ sub load_tree {
   } );
 
 }
-
-#-------------------------------------------------------------------------------
-#- private methods -------------------------------------------------------------
-#-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
 
