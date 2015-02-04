@@ -13,10 +13,10 @@ use Moose;
 use Bio::Metadata::Types;
 use namespace::autoclean;
 
-has md5  => ( is => 'rw', isa => 'MD5' );
-has uuid => ( is => 'rw', isa => 'UUID' );
-has amr  => ( is => 'rw', isa => 'AntimicrobialName' );
-has sir  => ( is => 'rw', isa => 'SIRTerm' );
+has md5  => ( is => 'rw', isa => 'Bio::Metadata::Types::MD5' );
+has uuid => ( is => 'rw', isa => 'Bio::Metadata::Types::UUID' );
+has amr  => ( is => 'rw', isa => 'Bio::Metadata::Types::AntimicrobialName' );
+has sir  => ( is => 'rw', isa => 'Bio::Metadata::Types::SIRTerm' );
 
 package main;
 
