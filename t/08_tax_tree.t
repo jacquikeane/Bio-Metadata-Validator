@@ -53,12 +53,12 @@ is( $root->getNodeValue->{lft},  1, 'root node has lft == 1' );
 is( $root->getNodeValue->{rgt}, 24, 'root node has rgt == 24' );
 
 my $nodes = $tl->get_node_values;
-is_deeply( $nodes->[1], [ 1, 'root node', 1, 24, 1 ], '"get_node_values" returns root node as expected' );
-is_deeply( $nodes->[12], [ 12, 'leaf 5', 3, 4, 2 ], '"get_node_values" returns last node as expected' );
+is_deeply( $nodes->[0], [ 1, 'root node', 1, 24, 1 ], '"get_node_values" returns root node as expected' );
+is_deeply( $nodes->[11], [ 12, 'leaf 5', 3, 4, 2 ], '"get_node_values" returns last node as expected' );
 
 $nodes = $tl->get_node_values(1);
-is_deeply( $nodes->[1], [ 1, 'root node', 1, 24, 1 ], '"get_node_values(1)" returns root node as expected' );
-is_deeply( $nodes->[12], [ 10, 'leaf 3', 21, 22, 5 ], '"get_node_values(1)" returns last node as expected' );
+is_deeply( $nodes->[0], [ 1, 'root node', 1, 24, 1 ], '"get_node_values(1)" returns root node as expected' );
+is_deeply( $nodes->[11], [ 10, 'leaf 3', 21, 22, 5 ], '"get_node_values(1)" returns last node as expected' );
 
 $DB::single = 1;
 

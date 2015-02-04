@@ -251,7 +251,7 @@ C<nodes.dmp> file.
 sub get_node_values {
   my ( $self, $in_tree_order ) = @_;
 
-  my @rows = [];
+  my @rows;
 
   if ( $in_tree_order ) {
     # return the nodes in tree traversal-order
@@ -271,7 +271,7 @@ sub get_node_values {
     # return the nodes in the order in which they were read from the names.dmp
     # file
     foreach my $node ( @{ $self->nodes } ) {
-      next unless defined $node; # skip empty first slot in list of nodes
+      next if not defined $node; # skip empty first slot in list of nodes
       my $v = $node->getNodeValue;
       push @rows, [
         $v->{tax_id},
