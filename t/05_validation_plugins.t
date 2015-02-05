@@ -15,6 +15,7 @@ my $plugins = [ qw(
   DateTime
   Ontology
   Bool
+  Taxonomy
 ) ];
 
 foreach my $plugin ( @$plugins ) {
@@ -94,20 +95,65 @@ isnt( Bio::Metadata::Validator::Plugin::Bool->validate( undef   ), 1, '"Bool" in
 isnt( Bio::Metadata::Validator::Plugin::Bool->validate( {}      ), 1, '"Bool" invalidates {} correctly' );
 isnt( Bio::Metadata::Validator::Plugin::Bool->validate( 'abc'   ), 1, '"Bool" invalidates "abc" correctly' );
 
+# these next tests use mock ontology/taxonomy  files, with valid content but only a few terms
+$c = Bio::Metadata::Config->new( config_file => 't/data/05_ontology.conf' );
+$r->config($c);
+$m = $r->read_csv('t/data/05_ontology.csv');
+
+_run_ontology_tests($m);
+
+$c = Bio::Metadata::Config->new( config_file => 't/data/05_taxonomy.conf' );
+$r->config($c);
+$m = $r->read_csv('t/data/05_taxonomy.csv');
+
+_run_taxonomy_tests($m);
+
+# can't check that the tax ID matches the scientific name here, because we're
+# validating field by field, so we never have both in our hand at the same
+# time
+
+# and this block runs the same tests but against full ontology/taxonomy files
 SKIP: {
   skip 'slow tests (set $ENV{RUN_SLOW_TESTS} to true to run)', 8
     if ( not defined $ENV{RUN_SLOW_TESTS} or not $ENV{RUN_SLOW_TESTS} );
 
-  diag 'running slow tests';
+  diag 'running slow tests; using full ontology/taxonomy files';
 
   require Test::CacheFile;
+
+  diag 'downloading ontologies';
   Test::CacheFile::cache( 'http://purl.obolibrary.org/obo/subsets/envo-basic.obo', 'envo-basic.obo' );
   Test::CacheFile::cache( 'http://purl.obolibrary.org/obo/gaz.obo', 'gaz.obo' );
   Test::CacheFile::cache( 'http://www.brenda-enzymes.info/ontology/tissue/tree/update/update_files/BrendaTissueOBO', 'bto.obo' );
 
-  $c = Bio::Metadata::Config->new( config_file => 't/data/05_ontology.conf' );
+  $c = Bio::Metadata::Config->new( config_file => 't/data/05_full_ontologies.conf' );
   $r->config($c);
   $m = $r->read_csv('t/data/05_ontology.csv');
+
+  _run_ontology_tests($m);
+
+  diag 'downloading taxonomy';
+  Test::CacheFile::cache( 'ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdump.tar.gz', 'taxdump.tar.gz' );
+
+  require Archive::Tar;
+  my $tar = Archive::Tar->new('.cached_test_files/taxdump.tar.gz');
+  $tar->extract_file( 'names.dmp', '.cached_test_files/names.dmp' );
+
+  $c = Bio::Metadata::Config->new( config_file => 't/data/05_full_taxonomy.conf' );
+  $r->config($c);
+  $m = $r->read_csv('t/data/05_taxonomy.csv');
+
+  _run_taxonomy_tests($m);
+}
+
+done_testing;
+
+exit;
+
+#-------------------------------------------------------------------------------
+
+sub _run_ontology_tests {
+  my $m = shift;
 
   is( $v->validate($m), 0, 'file is marked as invalid when parsing CSV bad ontology field' );
 
@@ -121,5 +167,18 @@ SKIP: {
   is( $m->row_errors->[5], undef, 'no error with valid BRENDA term' );
 }
 
-done_testing;
+sub _run_taxonomy_tests {
+  my $m = shift;
+
+  is( $v->validate($m), 0, 'file is marked as invalid when parsing CSV bad taxonomy fields' );
+  $DB::single = 1;
+
+  is( $m->row_errors->[0], undef, 'no error with valid tax ID and scientific name' );
+  is( $m->row_errors->[1], undef, 'no error with valid tax ID only' );
+  is( $m->row_errors->[2], undef, 'no error with valid scientific name only' );
+
+  like( $m->row_errors->[3], qr/errors found on row 4] \[value in field 'scientific_name' is not valid/, 'error with bad scientific name' );
+  like( $m->row_errors->[4], qr/errors found on row 5] \[value in field 'tax_id' is not valid/, 'error with bad tax ID' );
+  like( $m->row_errors->[4], qr/errors found on row 5] \[value in field 'tax_id' is not valid/, 'error with bad tax ID' );
+}
 

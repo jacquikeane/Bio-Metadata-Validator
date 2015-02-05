@@ -75,7 +75,7 @@ has '_config'            => ( is => 'rw', isa => 'Bio::Metadata::Config' );
 # field-validation plugins
 has 'plugins' => (
   is  => 'ro',
-  default => sub { [ qw( Str Int Enum DateTime Ontology Bool ) ] },
+  default => sub { [ qw( Str Int Enum DateTime Ontology Bool Taxonomy ) ] },
 );
 
 #-------------------------------------------------------------------------------
