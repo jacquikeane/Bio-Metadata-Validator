@@ -1,0 +1,48 @@
+format-version: 1.2
+date: 23:12:2013 14:47
+saved-by: michaelashburner
+auto-generated-by: OBO-Edit 2.3-beta5
+synonymtypedef: ABBREVIATION "ABBREVIATION" EXACT
+synonymtypedef: COLLOQUIAL_NAME "COLLOQUIAL NAME" EXACT
+synonymtypedef: FORMAL_NAME "FORMAL NAME" EXACT
+synonymtypedef: FORMER_NAME "FORMER NAME" EXACT
+synonymtypedef: LAPSUS "LAPSUS" EXACT
+synonymtypedef: SPELLING_VARIANT "SPELLING VARIANT" EXACT
+default-namespace: file:/Users/michaelashburner/Desktop/gaz/gaz.obo
+remark: This is an alpha version and is only for experimental implementation.
+remark: Comments etc to Michael Ashburner, ma11@gen.cam.ac.uk
+remark: Acknowledgements and sources: A large number of sources have been, and are being, used to build gaz.obo. By far
+remark: the most used are the pages of Wikipedia, which seem to be quite accurate in this domain. Thanks to all
+remark: of those who contribute to this invaluable resource. In addition, a number of other sources have been
+remark: used quite extensively and I wish to acknowledge, with thanks, the following (which is not exhaustive):
+remark: ...
+[Term]
+id: GAZ:00444179
+name: Wellcome Trust Genome Campus
+namespace: GAZ
+def: "A scientific research campus." [url:http\://en.wikipedia.org/wiki/Wellcome_Trust_Genome_Campus]
+relationship: located_in GAZ:00443954 ! Civil Parish of Hinxton
+created_by: michaelashburner
+creation_date: 2011-07-02T11:14:42Z
+
+[Term]
+id: GAZ:00444180
+name: Wellcome Trust Sanger Institute
+namespace: GAZ
+def: "Anon-profit, genomics and genetics research institute, primarily funded by the Wellcome Trust." [url:h
+ttp\://en.wikipedia.org/wiki/Wellcome_Trust_Sanger_Institute]
+synonym: "Sanger Centre" EXACT FORMER_NAME []
+relationship: located_in GAZ:00444179 ! Wellcome Trust Genome Campus
+created_by: michaelashburner
+creation_date: 2011-07-02T11:16:31Z
+
+[Term]
+id: GAZ:00444181
+name: European Bioinformatics Institute
+namespace: GAZ
+def: "A centre for research and services in bioinformatics, and is part of European Molecular Biology Labora
+tory (EMBL)." [url:http\://en.wikipedia.org/wiki/European_Bioinformatics_Institute]
+relationship: located_in GAZ:00444179 ! Wellcome Trust Genome Campus
+created_by: michaelashburner
+creation_date: 2011-07-02T11:16:31Z
+

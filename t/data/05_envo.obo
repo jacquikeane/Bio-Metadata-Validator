@@ -1,0 +1,33 @@
+format-version: 1.2
+subsetdef: disposition_slim "Disposition slim"
+subsetdef: mpath_slim "Pathology slim"
+subsetdef: relational_slim "Relational slim: types of quality that require an additional entity in order to exist"
+subsetdef: scalar_slim "Scalar slim"
+subsetdef: value_slim "Value slim"
+default-namespace: ENVO
+ontology: subsets/envo-basic.obo
+
+[Term]
+id: ENVO:00000000
+name: geographic feature
+comment: May appear on a map.
+synonym: "macroscopic spatial feature" EXACT []
+xref: Wikipedia:Geographic_feature
+is_a: ENVO:00002297 ! environmental feature
+
+[Term]
+id: ENVO:00000001
+name: bedding-plane cave
+def: "A cavity developed along a bedding-plane and elongate in cross-section as a result." [web:http\://wasg.u/terminol.html]
+is_a: ENVO:00000067 ! cave
+
+[Term]
+id: ENVO:00000002
+name: anthropogenic geographic feature
+def: "An anthropogenic geographic feature is a geographic feature\nresulting from the influence of human beings on nature." [ORCID:0000-0002-4366-3088]
+synonym: "man-made feature" RELATED []
+synonym: "manmade feature" RELATED []
+xref: FTT:78
+xref: TGN:50001
+is_a: ENVO:00000000 ! geographic feature
+

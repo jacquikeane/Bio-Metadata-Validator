@@ -1,0 +1,37 @@
+format-version: 1.2
+date: 22:10:2014 18:45
+saved-by: Marion
+auto-generated-by: OBO-Edit 2.3-beta5
+synonymtypedef: GE "LANGUAGE GERMAN"
+synonymtypedef: SCI "SCIENTIFIC NAME"
+default-namespace:
+
+[Term]
+id: BTO:0000644
+name: intestinal juice
+namespace: BrendaTissueOBO
+def: "A fluid that is secreted in small quantity in the small intestine, is highly variable in constitution, and contains especially various enzymes (as erepsin, lipase, lactase, enterokinase, and amylase) and mucus." [Fast_Health_Medical_Dictionary:http\://www.fasthealth.com/dictionary/]
+synonym: "succus entericus" RELATED []
+is_a: BTO:0000346 ! digestive juice
+relationship: develops_from BTO:0000640 ! intestinal gland
+relationship: related_to BTO:0000651 ! small intestine
+
+[Term]
+id: BTO:0000645
+name: colon sigmoideum
+namespace: BrendaTissueOBO
+def: "The S-shaped part of the colon which lies in the pelvis, extending from the pelvic brim to the third segment of the sacrum, and continuous above with the descending (or iliac) colon and below with the rectum." [Dorlands_Medical_Dictionary:MerckSource]
+synonym: "pelvic colon" RELATED []
+synonym: "sigmoid colon" RELATED []
+synonym: "sigmoid flexure" RELATED []
+relationship: part_of BTO:0000269 ! colon
+
+[Term]
+id: BTO:0000646
+name: left colon
+namespace: BrendaTissueOBO
+def: "The distal portion of the colon; it develops embryonically from the hindgut and functions in the storage and elimination of waste." [Dorlands_Medical_Dictionary:MerckSource]
+synonym: "distal colon" RELATED []
+relationship: develops_from BTO:0000510 ! hindgut
+relationship: part_of BTO:0000269 ! colon
+
