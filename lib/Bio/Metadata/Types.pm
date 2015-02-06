@@ -27,8 +27,16 @@ subtype 'Bio::Metadata::Types::UUID',
 
 subtype 'Bio::Metadata::Types::AntimicrobialName',
   as 'Str',
-  where { m/^[A-Za-z0-9\-\(\)\s]+$/ },
+  where { m/^[A-Za-z0-9\-\/\(\)\s]+$/ },
   message { 'Not a valid antimicrobial compound name' };
+
+subtype 'Bio::Metadata::Types::AMRString',
+  as 'Str',
+  where { m/(([A-Za-z0-9\-\/\(\)\s]+);([SIR]);(\d+)(;(\w+))?),?\s*/ },
+  message { 'Not a valid antimicrobial resistance test result' };
+# NOTE this regex isn't quite right. It will still allow broken AMR strings
+# after a comma, e.g. am1;S;10,am2. That second, incomplete term should mean
+# that the whole string is rejected.
 
 subtype 'Bio::Metadata::Types::SIRTerm',
   as 'Str',
