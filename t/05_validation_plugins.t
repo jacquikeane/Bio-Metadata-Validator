@@ -179,6 +179,10 @@ sub _run_taxonomy_tests {
 
   like( $m->row_errors->[3], qr/errors found on row 4] \[value in field 'scientific_name' is not valid/, 'error with bad scientific name' );
   like( $m->row_errors->[4], qr/errors found on row 5] \[value in field 'tax_id' is not valid/, 'error with bad tax ID' );
-  like( $m->row_errors->[4], qr/errors found on row 5] \[value in field 'tax_id' is not valid/, 'error with bad tax ID' );
+
+  TODO: {
+    todo_skip "can't check that tax ID matches scientific name", 1;
+    like( $m->row_errors->[5], qr/errors found on row 6]/, "error where tax ID doesn't match scientific name" );
+  }
 }
 
