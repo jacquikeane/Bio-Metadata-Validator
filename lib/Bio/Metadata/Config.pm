@@ -8,7 +8,7 @@ use namespace::autoclean;
 
 use Config::General;
 use Carp qw( croak );
-use TryCatch;
+use Try::Tiny;
 use File::Slurp qw( read_file );
 
 #-------------------------------------------------------------------------------
@@ -94,10 +94,9 @@ sub _accept_config_string {
   my $cg;
   try {
     $cg = Config::General->new( -String => $self->config_string );
-  }
-  catch ( $e ) {
-    croak "ERROR: could not load configuration: $e";
-  }
+  } catch {
+    croak "ERROR: could not load configuration: $_";
+  };
 
   my %config = $cg->getall;
 

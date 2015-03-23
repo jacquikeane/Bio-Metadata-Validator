@@ -5,7 +5,7 @@ package Bio::Metadata::Validator;
 
 use Moose;
 use namespace::autoclean;
-use TryCatch;
+use Try::Tiny;
 use Text::CSV;
 use File::Slurp;
 use Digest::MD5 qw( md5_hex );
@@ -112,12 +112,11 @@ sub validate {
     my $row_errors = '';
     try {
       $self->_validate_row( $row, \$row_errors );
-    }
-    catch ( Bio::Metadata::Validator::Exception::NoValidatorPluginForColumnType $e ) {
+    } catch {
       # add the row number (which we don't have in the _validate_row method) to
       # the error message and re-throw
-      croak "ERROR: row $row_num; " . $e->error;
-    }
+      croak "ERROR: row $row_num; $_";
+    };
 
     if ( $row_errors ) {
 

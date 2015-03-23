@@ -7,7 +7,7 @@ use Moose;
 use namespace::autoclean;
 
 use DateTime::Format::ISO8601;
-use TryCatch;
+use Try::Tiny;
 
 with 'MooseX::Role::Pluggable::Plugin', 'Bio::Metadata::Validator::PluginRole';
 
@@ -24,10 +24,10 @@ sub validate {
   my $dt;
   try {
    $dt = DateTime::Format::ISO8601->parse_datetime($value);
-  } catch ( $e ) {
+  } catch {
     # caught an exception from DateTime::Format; we'll treat is as meaning the
     # value is not a valid DateTime
-  }
+  };
 
   return defined $dt ? 1 : 0;
 }
