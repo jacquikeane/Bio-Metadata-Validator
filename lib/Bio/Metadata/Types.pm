@@ -43,6 +43,13 @@ subtype 'Bio::Metadata::Types::SIRTerm',
   where { m/^[SIR]$/ },
   message { 'Not a valid susceptibility term' };
 
+enum 'Bio::Metadata::Types::OntologyName', [ qw( gazetteer envo brenda ) ];
+
+subtype 'Bio::Metadata::Types::PositiveInt',
+  as 'Int',
+  where { $_ > 0 },
+  message { 'Not a positive integer' };
+
 #-------------------------------------------------------------------------------
 
 __PACKAGE__->meta->make_immutable;
