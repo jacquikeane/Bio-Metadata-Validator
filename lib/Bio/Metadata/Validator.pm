@@ -212,7 +212,9 @@ sub _validate_row {
 
     $field_definitions->{$field_name} = $field_definition;
 
-    # check for required/optional and skip empty fields
+    # check for required/optional and skip empty fields. We only need to
+    # perform this check for fields that are empty, since fields that have
+    # values will be validated by the normal mechanism anyway.
     if ( not defined $field_value or $field_value =~ m/^\s*$/ ) {
       if ( defined $field_definition->{required} and
            $field_definition->{required} ) {
@@ -256,6 +258,13 @@ sub _validate_row {
   $self->_validate_if_dependencies( $raw_values, $row_errors_ref );
   $self->_validate_one_of_dependencies( $raw_values, $row_errors_ref );
   $self->_validate_some_of_dependencies( $raw_values, $row_errors_ref );
+
+  # TODO there's nothing currently stopping the author of the config putting
+  # TODO the same column in two dependencies, i.e. making a column subject to
+  # TODO both an "if" and a "one_of". What happens in that case is undefined,
+  # TODO so it would be sensible to set a flag on each column when it's first
+  # TODO used in a dependency, checking for it before using the column in any
+  # TODO dependency.
 }
 
 #-------------------------------------------------------------------------------
