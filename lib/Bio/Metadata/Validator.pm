@@ -70,7 +70,15 @@ has '_field_values'      => ( is => 'rw', isa => 'HashRef' );
 has '_valid_fields'      => ( is => 'rw', isa => 'HashRef' );
 has '_checked_if_config' => ( is => 'rw', isa => 'Bool', default => 0 );
 has '_checked_eo_config' => ( is => 'rw', isa => 'Bool', default => 0 );
-has '_config'            => ( is => 'rw', isa => 'Bio::Metadata::Config' );
+has '_unknown_terms'     => ( is => 'rw', isa => 'HashRef[Str]' );
+has '_config'            => ( is => 'rw', isa => 'Bio::Metadata::Config', trigger => \&_set_unknowns );
+
+sub _set_unknowns {
+  my ( $self, $config ) = @_;
+
+  my %unknown_terms = map { $_ => 1 } @{ $config->config->{unknown_term} };
+  $self->_unknown_terms( \%unknown_terms );
+}
 
 # field-validation plugins
 has 'plugins' => (
@@ -132,7 +140,10 @@ sub validate {
 
   # clean up the book-keeping hash keys that we put into the config as we do
   # the validation
-  delete $_->{__col_num} for ( @{ $manifest->config->fields } );
+  foreach my $field ( @{ $manifest->config->fields } ) {
+    delete $_->{__col_num};
+    delete $_->{__unknown_terms};
+  }
 
   return $manifest->has_invalid_rows ? 0 : 1;
 }
@@ -200,9 +211,11 @@ sub _validate_row {
 
   FIELD: for ( my $i = 0; $i < $num_fields; $i++ ) {
     # retrieve the definition for this particular field, and add in its column
-    # number for later
+    # number for later. We also add a reference to the various "unknown" terms,
+    # for use by the plugin role
     my $field_definition = $self->_config->get('field')->[$i];
     $field_definition->{__col_num} = $i;
+    $field_definition->{__unknown_terms} = $self->_unknown_terms;
 
     my $field_name  = $field_definition->{name};
     my $field_type  = $field_definition->{type};
@@ -217,7 +230,8 @@ sub _validate_row {
     # values will be validated by the normal mechanism anyway.
     if ( not defined $field_value or $field_value =~ m/^\s*$/ ) {
       if ( defined $field_definition->{required} and
-           $field_definition->{required} ) {
+           $field_definition->{required}         and
+           ! $field_definition->{unknown} ) {
         $$row_errors_ref .= "['$field_name' is a required field] ";
       }
       next FIELD;
@@ -233,13 +247,12 @@ sub _validate_row {
       );
     }
 
-    # use the plugin to validate the field
-    my $valid = $plugin->validate($field_value, $field_definition);
+    # use the plugin to validate the field. Returns 1 for valid, 0 for invalid,
+    # -1 for unknown
+    $valid_fields->{$field_name} = $plugin->validate($field_value, $field_definition);
 
-    if ( $valid ) {
-      $valid_fields->{$field_name} = 1;
-    }
-    else {
+    # if the field is invalid, add an error message
+    if ( $valid_fields->{$field_name} == 0 ) {
       if ( $self->verbose_errors ) {
         my $desc = $field_definition->{description} || $field_type;
         $$row_errors_ref .= "[value in field '$field_name' is not valid; field description: '$desc'] ";
@@ -247,7 +260,6 @@ sub _validate_row {
       else {
         $$row_errors_ref .= "[value in field '$field_name' is not valid] ";
       }
-      my $x = 0;
     }
   }
 
@@ -255,6 +267,8 @@ sub _validate_row {
   $self->_field_values( $field_values );
   $self->_valid_fields( $valid_fields );
 
+  # we've checked that the individual fields are valid. Now check that the
+  # dependencies on the individual fields hold
   $self->_validate_if_dependencies( $raw_values, $row_errors_ref );
   $self->_validate_one_of_dependencies( $raw_values, $row_errors_ref );
   $self->_validate_some_of_dependencies( $raw_values, $row_errors_ref );
@@ -264,7 +278,7 @@ sub _validate_row {
   # TODO both an "if" and a "one_of". What happens in that case is undefined,
   # TODO so it would be sensible to set a flag on each column when it's first
   # TODO used in a dependency, checking for it before using the column in any
-  # TODO dependency.
+  # TODO other dependencies.
 }
 
 #-------------------------------------------------------------------------------
@@ -282,7 +296,6 @@ sub _validate_if_dependencies {
                   exists $self->_config->get('dependencies')->{if} );
 
   IF: foreach my $if_col_name ( keys %{ $self->_config->get('dependencies')->{if} } ) {
-    my $dependency = $self->_config->get('dependencies')->{if}->{$if_col_name};
 
     my $field_definition = $self->_field_defs->{$if_col_name};
     unless ( defined $field_definition ) {
@@ -290,6 +303,13 @@ sub _validate_if_dependencies {
         error => "ERROR: can't find field definition for '$if_col_name' (required by 'if' dependency)\n"
       );
     }
+
+    # if the field that defines the "if" dependencies is flagged as "unknown",
+    # all bets are off We can't work out which set of other fields (given by
+    # the "then" or "else" blocks) should be required and valid
+    next IF if ( $field_definition->{accepts_unknown} and
+                 defined $self->_valid_fields->{$if_col_name} and
+                 $self->_valid_fields->{$if_col_name} < 0 );
 
     # make sure that the column which is supposed to be true or false, the
     # "if" column on which the dependency hangs, is itself valid
@@ -317,11 +337,11 @@ sub _validate_if_dependencies {
     # look up the column number for the field
     my $if_col_num = $field_definition->{__col_num};
 
-    # work around the Config::General behaviour of single element arrays vs
-    # scalars
-    my $thens = ref $dependency->{then}
-              ? $dependency->{then}
-              : [ $dependency->{then} ];
+    my $dependency = $self->_config->get('dependencies')->{if}->{$if_col_name};
+
+    my $thens = ref $dependency->{then}  # (work around the Config::General
+              ? $dependency->{then}      # behaviour of single element arrays
+              : [ $dependency->{then} ]; # vs # scalars)
     my $elses = ref $dependency->{else}
               ? $dependency->{else}
               : [ $dependency->{else} ];

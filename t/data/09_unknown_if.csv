@@ -1,0 +1,9 @@
+one,two,three,four,five,six
+1,1,,1,1,
+1,,,1,1,
+,1,,1,1,
+"not available",1,,1,1,
+"unknown",1,,1,1,
+"not available",,,1,1,
+1,"not available",,1,1,
+pass,1,,1,1,
