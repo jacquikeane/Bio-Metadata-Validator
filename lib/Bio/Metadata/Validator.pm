@@ -76,7 +76,13 @@ has '_config'            => ( is => 'rw', isa => 'Bio::Metadata::Config', trigge
 sub _set_unknowns {
   my ( $self, $config ) = @_;
 
-  my %unknown_terms = map { $_ => 1 } @{ $config->config->{unknown_term} };
+  # all of this is to avoid creating a ref to an empty array in the config. Using
+  # the "map" on an undefined slot appears to auto-vivify the array ref in the
+  # config, which makes one of the tests fail...
+  my %unknown_terms = defined $config->config->{unknown_term}
+                    ? map { $_ => 1 } @{ $config->config->{unknown_term} }
+                    : ();
+
   $self->_unknown_terms( \%unknown_terms );
 }
 
@@ -141,8 +147,8 @@ sub validate {
   # clean up the book-keeping hash keys that we put into the config as we do
   # the validation
   foreach my $field ( @{ $manifest->config->fields } ) {
-    delete $_->{__col_num};
-    delete $_->{__unknown_terms};
+    delete $field->{__col_num};
+    delete $field->{__unknown_terms};
   }
 
   return $manifest->has_invalid_rows ? 0 : 1;

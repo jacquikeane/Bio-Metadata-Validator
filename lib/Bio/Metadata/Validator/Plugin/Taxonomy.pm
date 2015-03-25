@@ -31,7 +31,9 @@ sub validate {
   $self->_load_taxonomy($names_file)
     if not scalar keys %{$self->_ids};
 
-  return $self->_ids->{$value} || $self->_names->{$value} || 0;
+  my $valid = $self->_ids->{$value} || $self->_names->{$value};
+
+  return $valid ? 1 : 0;
 }
 
 #-------------------------------------------------------------------------------
