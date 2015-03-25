@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More;
+use Test::More tests => 22;
 use Test::Exception;
 use File::Slurp;
 use Test::Output;

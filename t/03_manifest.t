@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More;
+use Test::More tests => 21;
 use Test::Exception;
 use File::Temp;
 use File::Slurp qw( read_file );

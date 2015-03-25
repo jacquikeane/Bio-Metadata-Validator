@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More;
+use Test::More tests => 78;
 use Test::Exception;
 
 use Bio::Metadata::Validator;
@@ -171,7 +171,6 @@ sub _run_taxonomy_tests {
   my $m = shift;
 
   is( $v->validate($m), 0, 'file is marked as invalid when parsing CSV bad taxonomy fields' );
-  $DB::single = 1;
 
   is( $m->row_errors->[0], undef, 'no error with valid tax ID and scientific name' );
   is( $m->row_errors->[1], undef, 'no error with valid tax ID only' );

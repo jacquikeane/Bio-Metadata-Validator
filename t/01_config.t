@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More;
+use Test::More tests => 17;
 use Test::Exception;
 use Digest::MD5 qw( md5_hex );
 

@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More;
+use Test::More tests => 21;
 use Test::Exception;
 
 use Bio::Metadata::TaxTree
@@ -59,8 +59,6 @@ is_deeply( $nodes->[11], [ 12, 'leaf 5', 3, 4, 2 ], '"get_node_values" returns l
 $nodes = $tl->get_node_values(1);
 is_deeply( $nodes->[0], [ 1, 'root node', 1, 24, 1 ], '"get_node_values(1)" returns root node as expected' );
 is_deeply( $nodes->[11], [ 10, 'leaf 3', 21, 22, 5 ], '"get_node_values(1)" returns last node as expected' );
-
-$DB::single = 1;
 
 done_testing;
 
