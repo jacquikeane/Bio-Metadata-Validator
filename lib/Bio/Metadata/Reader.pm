@@ -82,13 +82,26 @@ sub read_csv {
 
   # calculate an MD5 digest for the file
   my $digest = Digest::MD5->new;
+  $digest->addfile($fh);
+  $manifest->md5( $digest->hexdigest );
+
+  # rewind the file after calculating the digest, so that we can read its
+  # contents
+  seek $fh, 0, 0
+    or die "ERROR: couldn't rewind input file for reading";
+
+  my $file_contents = join '', <$fh>;
+  $file_contents =~ s/\r\n/\r/g;
+  $file_contents =~ s/\r/\n/g;
+
+  my @file_rows = split m/\n/, $file_contents;
 
   my $row_num = 0;
 
-  ROW: while ( my $row_string = <$fh> ) {
-    $row_num++;
+  ROW: foreach my $row_string ( @file_rows ) {
+    chomp $row_string;
 
-    $digest->add($row_string);
+    $row_num++;
 
     # try to skip the header row, if present, and blank rows
     if ( $row_num == 1 and ( $row_string =~ m/^$header/ or $row_string =~ m/^\,+$/ ) ) {
@@ -105,8 +118,6 @@ sub read_csv {
     my @raw_values = $csv->fields;
     $manifest->add_row( \@raw_values );
   }
-
-  $manifest->md5( $digest->hexdigest );
 
   return $manifest;
 }

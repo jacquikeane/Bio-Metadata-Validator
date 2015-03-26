@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 14;
+use Test::More tests => 18;
 use Test::Exception;
 
 use Bio::Metadata::Config;
@@ -42,5 +42,11 @@ is( $manifest->rows->[2]->[1], undef, 'got undef on third row of manifest' );
 is( $manifest->md5, '4dbc20b94e33929bc9d8832da698f130', 'MD5 checksum correctly set' );
 like( $manifest->uuid, qr/^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/i, 'UUID correctly set' );
 
-done_testing();
+ok( $manifest = $r->read_csv('t/data/02_working_manifest_with_cr.csv'), '"read" works for a manifest with carriage returns' );
+
+is( $manifest->md5, 'e24004218b8d2f7c1947198c2b933b57', 'MD5 checksum correctly set' );
+is( $manifest->row_count, 3, 'got expected number of rows in manifest' );
+is( $manifest->rows->[-1]->[-1], 'three', 'got expected value on last row of manifest' );
+
+done_testing;
 
