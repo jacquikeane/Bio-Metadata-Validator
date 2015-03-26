@@ -3,7 +3,8 @@
 use strict;
 use warnings;
 
-use Test::More tests => 25;
+# use Test::More tests => 25;
+use Test::More;
 use Test::Exception;
 
 use Bio::Metadata::Validator;
@@ -41,24 +42,27 @@ like( $m->row_errors->[13], qr/^\[errors found on row 14] \[field 'seven'.*? \[f
 $c->config_name('one_of');
 $m = $r->read_csv('t/data/06_one_of.csv');
 is( $v->validate($m), 0, 'broken "one of" relationship input file marked as invalid' );
-is( $m->invalid_row_count, 3, 'got expected number of invalid rows (3)' );
+is( $m->invalid_row_count, 4, 'got expected number of invalid rows (4)' );
 
-like( $m->row_errors->[1], qr/^\[errors found on row 2\] \[exactly one field out of 'ten', 'eleven' should.*?]$/, 'error when two columns of a "one-of" group is present' );
-like( $m->row_errors->[2], qr/^\[errors found on row 3\] \[value in field 'twelve' is not valid/, 'error due to invalid field' );
-like( $m->row_errors->[2], qr/^\[errors found on row 3\] .*? \[exactly one field out of 'twelve'.*?found 2.*?]$/, 'error when two columns of a three-column "one-of" group are present' );
-like( $m->row_errors->[3], qr/\[exactly one field out of 'twelve'.*?found 3.*?]$/, 'error when three columns of a three-column "one-of" group are present' );
+is(   $m->row_errors->[0], undef, 'no errors with valid fields in "one of"' );
+like( $m->row_errors->[1], qr/^\[errors found on row 2\] \[exactly one field out of 'one', 'two' should.*?]$/, 'error when two columns of "one-of" present' );
+like( $m->row_errors->[2], qr/^\[errors found on row 3\] \['one' is a required field\]\s+\[exactly one field out of 'one', 'two' should.*?]$/, 'error when no columns of "one-of" present and one is required' );
+like( $m->row_errors->[3], qr/^\[errors found on row 4\].*?\[exactly one field out of 'three'.*?found 2.*?]$/, 'error when two columns of three-column "one-of" present' );
+like( $m->row_errors->[4], qr/\[exactly one field out of 'three'.*?found 3.*?]$/, 'error when three columns of three-column "one-of" present' );
+is(   $m->row_errors->[5], undef, 'no errors with no valid fields in "one of" with all optional fields' );
 
 # "some_of" relationships
 $c->config_name('some_of');
 $m = $r->read_csv('t/data/06_some_of.csv');
 is( $v->validate($m), 0, 'broken "some of" relationship input file marked as invalid' );
-is( $m->invalid_row_count, 3, 'got expected number of invalid rows (3)' );
+is( $m->invalid_row_count, 2, 'got expected number of invalid rows (2)' );
 
-like( $m->row_errors->[1], qr/^\[errors found on row 2] \[at least one field out of 'fifteen'.*?]$/, 'error when no columns in a three-field "some-of" group are found' );
-like( $m->row_errors->[2], qr/^\[errors found on row 3] \[at least one field out of 'eighteen'.*?]$/, 'error when no columns in a two-field "some-of" group are found' );
-like( $m->row_errors->[3], qr/^\[errors found on row 4] \[value in field 'fifteen' is not valid]/, 'check for error with invalid value' );
-
-is( $m->row_count, 4, 'extra, unfilled row ignored' );
+is(   $m->row_errors->[0], undef, 'no error with valid fields in "some of"' );
+is(   $m->row_errors->[1], undef, 'no error when both fields in a two-field "some-of" group present' );
+like( $m->row_errors->[2], qr/^\[errors found on row 3] \['one' is a required field\]\s+\[at least one field out of 'one'.*?]$/, 'error when no columns in a three-field "some-of" group present' );
+like( $m->row_errors->[3], qr/^\[errors found on row 4] \['one' is a required field\]$/, 'error with empty required field in "some-of" group' );
+is(   $m->row_errors->[4], undef, 'no error with all fields empty in "some-of" with no required fields' );
+is(   $m->row_errors->[5], undef, 'no error with all fields full in three-field "some-of"' );
 
 done_testing();
 

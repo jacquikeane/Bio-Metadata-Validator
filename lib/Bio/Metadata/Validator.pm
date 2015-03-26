@@ -304,23 +304,25 @@ sub _validate_dependencies {
     next DEP_TYPE unless ( defined $self->_config->get('dependencies') and
                            exists $self->_config->get('dependencies')->{$dep_type} );
 
-    GROUP: while ( my ( $group_name, $group ) = each %{ $self->_config->get('dependencies')->{$dep_type} } ) {
-      my ( $num_completed_fields, $num_unknown_fields, $num_fields_in_group, $group_list ) = $self->_count_fields($group);
+    GROUP: while ( my ( $group_name, $group ) =
+                     each %{ $self->_config->get('dependencies')->{$dep_type} } ) {
+      my $counts = $self->_count_fields($group);
 
       # we don't consider it an error if all of the fields are unknowns
-      next GROUP if $num_unknown_fields == $num_fields_in_group;
+      next GROUP if $counts->{num_unknown} == $counts->{num_total};
 
-      if ( $dep_type eq 'one_of' ) {
-        if ( $num_completed_fields != 1 ) {
-          my $group_fields = join ', ', map { qq('$_') } @$group_list;
-          $$row_errors_ref .= " [exactly one field out of $group_fields should be completed (found $num_completed_fields) and not 'unknown']";
-        }
+      # nor if all of the fields are optional
+      next GROUP if ( $counts->{num_completed} == 0 and
+                      $counts->{num_optional} == $counts->{num_total} );
+
+      if ( $dep_type eq 'one_of' and $counts->{num_completed} != 1 ) {
+        $$row_errors_ref .= ' [exactly one field out of ' . $counts->{group_fields}
+                            . ' should be completed (found ' . $counts->{num_completed}
+                            . ") and not 'unknown']";
       }
-      elsif ( $dep_type eq 'some_of' ) {
-        if ( $num_completed_fields < 1 ) {
-          my $group_fields = join ', ', map { qq('$_') } @$group_list;
-          $$row_errors_ref .= " [at least one field out of $group_fields should be completed and not 'unknown']";
-        }
+      elsif ( $dep_type eq 'some_of' and $counts->{num_completed} < 1 ) {
+        $$row_errors_ref .= ' [at least one field out of ' . $counts->{group_fields}
+                            . "should be completed and not 'unknown']";
       }
     }
   }
@@ -330,24 +332,29 @@ sub _validate_dependencies {
 #-------------------------------------------------------------------------------
 
 # walks the fields in the given dependency group and checks for fields with
-# "unknown"
+# "unknown". Returns a hash ref containing:
+#   num_completed: number of completed fields in the group
+#   num_unknown:   number of fields in the group with "unknown"
+#   num_optional   number of fields in the group which are optional (required != 1)
+#   num_total:     total number of fields in the group
+#   group_fields:  string giving the names of all fields in the group
 #
 # arguments: scalar; name of the group to check
-# returns:   scalar; number of completed fields in the group
-#            scalar; number of fields in the group with "unknown"
-#            scalar; total number of fields in the group
-#            scalar; string giving the names of all fields in the group
+# returns:   ref; hash with counts
 
 sub _count_fields {
   my ( $self, $group ) = @_;
 
   my $num_completed_fields = 0;
   my $num_unknown_fields   = 0;
+  my $num_optional_fields  = 0;
   my $num_fields_in_group  = 0;
 
   my $group_list = ref $group ? $group : [ $group ];
   FIELD: foreach my $field_name ( @$group_list ) {
     $num_fields_in_group++;
+    $num_optional_fields++ unless $self->_field_defs->{$field_name}->{required};
+
     my $field_value = $self->_field_values->{$field_name};
 
     next FIELD if not defined $field_value;
@@ -365,7 +372,15 @@ sub _count_fields {
     $num_completed_fields++;
   }
 
-  return ( $num_completed_fields, $num_unknown_fields, $num_fields_in_group, $group_list );
+  my $group_fields = join ', ', map { qq('$_') } @$group_list;
+
+  return {
+    num_completed => $num_completed_fields,
+    num_unknown   => $num_unknown_fields,
+    num_optional  => $num_optional_fields,
+    num_total     => $num_fields_in_group,
+    group_fields  => $group_fields,
+  };
 }
 
 #-------------------------------------------------------------------------------

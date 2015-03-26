@@ -47,28 +47,27 @@ like( $m->row_errors->[7], qr/^\[errors found on row 8] \[value in field 'one' .
 # "one_of" relationships
 $c->config_name('one_of');
 $m = $r->read_csv('t/data/09_unknown_one_of.csv');
-is( $v->validate($m), 0, '"one of" input file marked as invalid' );
-is( $m->invalid_row_count, 1, 'got expected number of invalid rows (1)' );
+is( $v->validate($m), 1, '"one of" input file marked as valid' );
+is( $m->invalid_row_count, 0, 'got expected number of invalid rows (0)' );
 
-is(   $m->row_errors->[0], undef, 'no error when not using "unknown"' );
-like( $m->row_errors->[1], qr/^\[errors found on row 2\] \[exactly one field out of 'one', 'two' should.*?]$/,
-  'error with only an "unknown" in a "one of" group' );
-is(   $m->row_errors->[2], undef, 'no error with an "unknown" and a valid value in a group' );
-is(   $m->row_errors->[3], undef, 'no error with both fields "unknown" in a group' );
-is(   $m->row_errors->[4], undef, 'no error with one "unknown" and one valid field in a group' );
+is( $m->row_errors->[0], undef, 'no error when not using "unknown"' );
+is( $m->row_errors->[1], undef, 'no error with unknown in required field in "one of"' );
+is( $m->row_errors->[2], undef, 'no error with an "unknown" and a valid value in a group' );
+is( $m->row_errors->[3], undef, 'no error with both fields "unknown" in a group' );
+is( $m->row_errors->[4], undef, 'no error with one "unknown" and one valid field in a group' );
 
 # "some_of" relationships
 $c->config_name('some_of');
 $m = $r->read_csv('t/data/09_unknown_some_of.csv');
 is( $v->validate($m), 0, '"some of" input file marked as invalid' );
-is( $m->invalid_row_count, 3, 'got expected number of invalid rows (3)' );
+is( $m->invalid_row_count, 1, 'got expected number of invalid rows (1)' );
 
 is(   $m->row_errors->[0], undef, 'no error when not using "unknown"' );
 like( $m->row_errors->[1], qr/^\[errors found on row 2] \[at least one field out of 'one', 'two'/, 'error with only "unknown" term in "some of"' );
 is(   $m->row_errors->[2], undef, 'no error when using one "unknown" and a valid value' );
 is(   $m->row_errors->[3], undef, 'no error when using two "unknown" terms in "some of"' );
-like( $m->row_errors->[4], qr/^\[errors found on row 5] \[at least one field out of 'three', 'four', 'five'/, 'error with no fields completed in "some of"' );
-like( $m->row_errors->[5], qr/^\[errors found on row 6] \[at least one field out of 'three', 'four', 'five'/, 'error with just an "unknown" in "some of"' );
+is(   $m->row_errors->[4], undef, 'no error with no values in "some of" when all fields are optional' );
+is(   $m->row_errors->[5], undef, 'no error with just an "unknown" in "some of" when all fields are optional' );
 is(   $m->row_errors->[6], undef, 'no error when using one "unknown" and one valid value in "some of"' );
 is(   $m->row_errors->[7], undef, 'no error when using one "unknown" and two valid values in "some of"' );
 
