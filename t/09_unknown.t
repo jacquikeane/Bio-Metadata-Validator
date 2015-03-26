@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 36;
+use Test::More tests => 34;
 use Test::Exception;
 
 use Bio::Metadata::Validator;
@@ -48,35 +48,29 @@ like( $m->row_errors->[7], qr/^\[errors found on row 8] \[value in field 'one' .
 $c->config_name('one_of');
 $m = $r->read_csv('t/data/09_unknown_one_of.csv');
 is( $v->validate($m), 0, '"one of" input file marked as invalid' );
-is( $m->invalid_row_count, 4, 'got expected number of invalid rows (4)' );
+is( $m->invalid_row_count, 1, 'got expected number of invalid rows (1)' );
 
-is( $m->row_errors->[0], undef, 'no error when not using "unknown"' );
-is( $m->row_errors->[1], undef, 'no error when using "unknown" correctly' );
-is( $m->row_errors->[2], undef, 'no error when using alternative "unknown" term' );
-
-like( $m->row_errors->[3], qr/^\[errors found on row 4\] \[value in field 'two'.*?\[exactly one field out of 'one', 'two' should.*?]$/,
-  'error with a disallowed "unknown" in a "one of" column' );
-like( $m->row_errors->[4], qr/^\[errors found on row 5\] \[value in field 'two'.*?\[exactly one field out of 'one', 'two' should.*?]$/,
-  'error with one allowed, one disallowed "unknown" terms in a "one of"' );
-like( $m->row_errors->[5], qr/^\[errors found on row 6\] \[exactly one field out of 'three', 'four' should.*?]$/,
-  'error with a disallowed "unknown" in a "one of" column' );
-like( $m->row_errors->[6], qr/^\[errors found on row 7\] \[exactly one field out of 'three', 'four' should.*?]$/,
-  'error with two allowed "unknown" terms in a "one of"' );
+is(   $m->row_errors->[0], undef, 'no error when not using "unknown"' );
+like( $m->row_errors->[1], qr/^\[errors found on row 2\] \[exactly one field out of 'one', 'two' should.*?]$/,
+  'error with only an "unknown" in a "one of" group' );
+is(   $m->row_errors->[2], undef, 'no error with an "unknown" and a valid value in a group' );
+is(   $m->row_errors->[3], undef, 'no error with both fields "unknown" in a group' );
+is(   $m->row_errors->[4], undef, 'no error with one "unknown" and one valid field in a group' );
 
 # "some_of" relationships
 $c->config_name('some_of');
 $m = $r->read_csv('t/data/09_unknown_some_of.csv');
 is( $v->validate($m), 0, '"some of" input file marked as invalid' );
-is( $m->invalid_row_count, 2, 'got expected number of invalid rows (2)' );
+is( $m->invalid_row_count, 3, 'got expected number of invalid rows (3)' );
 
 is(   $m->row_errors->[0], undef, 'no error when not using "unknown"' );
-is(   $m->row_errors->[1], undef, 'no error when using one "unknown" correctly' );
-is(   $m->row_errors->[2], undef, 'no error when using alternative "unknown" term' );
-like( $m->row_errors->[3], qr/^\[errors found on row 4] \[value in field 'one'/, 'error with an invalid "unknown" term' );
-is(   $m->row_errors->[4], undef, 'no error when using one "unknown" and a valid value' );
-is(   $m->row_errors->[5], undef, 'no error when using two "unknown" terms correctly' );
-like( $m->row_errors->[6], qr/^\[errors found on row 7] \[value in field 'four'/, 'error with "unknown" in column where it is not allowed' );
-is(   $m->row_errors->[7], undef, 'no error with "unknown" in three-field "one of"' );
+like( $m->row_errors->[1], qr/^\[errors found on row 2] \[at least one field out of 'one', 'two'/, 'error with only "unknown" term in "some of"' );
+is(   $m->row_errors->[2], undef, 'no error when using one "unknown" and a valid value' );
+is(   $m->row_errors->[3], undef, 'no error when using two "unknown" terms in "some of"' );
+like( $m->row_errors->[4], qr/^\[errors found on row 5] \[at least one field out of 'three', 'four', 'five'/, 'error with no fields completed in "some of"' );
+like( $m->row_errors->[5], qr/^\[errors found on row 6] \[at least one field out of 'three', 'four', 'five'/, 'error with just an "unknown" in "some of"' );
+is(   $m->row_errors->[6], undef, 'no error when using one "unknown" and one valid value in "some of"' );
+is(   $m->row_errors->[7], undef, 'no error when using one "unknown" and two valid values in "some of"' );
 
 done_testing;
 

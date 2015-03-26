@@ -1,8 +1,6 @@
 one,two,three,four
 1,,1,
 unknown,,1,
-not available,,1,
-1,unknown,1,
-unknown,unknown,1,
-1,,1,unknown
+unknown,1,1,
 1,,unknown,unknown
+1,,1,unknown

@@ -275,9 +275,7 @@ sub _validate_row {
 
   # we've checked that the individual fields are valid. Now check that the
   # dependencies on the individual fields hold
-  $self->_validate_if_dependencies( $raw_values, $row_errors_ref );
-  $self->_validate_one_of_dependencies( $raw_values, $row_errors_ref );
-  $self->_validate_some_of_dependencies( $raw_values, $row_errors_ref );
+  $self->_validate_dependencies( $raw_values, $row_errors_ref );
 
   # TODO there's nothing currently stopping the author of the config putting
   # TODO the same column in two dependencies, i.e. making a column subject to
@@ -285,6 +283,89 @@ sub _validate_row {
   # TODO so it would be sensible to set a flag on each column when it's first
   # TODO used in a dependency, checking for it before using the column in any
   # TODO other dependencies.
+}
+
+#-------------------------------------------------------------------------------
+
+# checks that the row meets any specified "one_of" dependencies
+#
+# arguments: ref;    array containing fields for a given row
+#            ref;    scalar with the raw row string
+# returns:   no return value
+
+sub _validate_dependencies {
+  my ( $self, $row, $row_errors_ref ) = @_;
+
+  $self->_validate_if_dependencies( $row, $row_errors_ref );
+
+  DEP_TYPE: foreach my $dep_type ( qw( one_of some_of ) ) {
+
+    # we're immediately done here if there are no "one of" dependencies to check
+    next DEP_TYPE unless ( defined $self->_config->get('dependencies') and
+                           exists $self->_config->get('dependencies')->{$dep_type} );
+
+    GROUP: while ( my ( $group_name, $group ) = each %{ $self->_config->get('dependencies')->{$dep_type} } ) {
+      my ( $num_completed_fields, $num_unknown_fields, $num_fields_in_group, $group_list ) = $self->_count_fields($group);
+
+      # we don't consider it an error if all of the fields are unknowns
+      next GROUP if $num_unknown_fields == $num_fields_in_group;
+
+      if ( $dep_type eq 'one_of' ) {
+        if ( $num_completed_fields != 1 ) {
+          my $group_fields = join ', ', map { qq('$_') } @$group_list;
+          $$row_errors_ref .= " [exactly one field out of $group_fields should be completed (found $num_completed_fields) and not 'unknown']";
+        }
+      }
+      elsif ( $dep_type eq 'some_of' ) {
+        if ( $num_completed_fields < 1 ) {
+          my $group_fields = join ', ', map { qq('$_') } @$group_list;
+          $$row_errors_ref .= " [at least one field out of $group_fields should be completed and not 'unknown']";
+        }
+      }
+    }
+  }
+
+}
+
+#-------------------------------------------------------------------------------
+
+# walks the fields in the given dependency group and checks for fields with
+# "unknown"
+#
+# arguments: scalar; name of the group to check
+# returns:   scalar; number of completed fields in the group
+#            scalar; number of fields in the group with "unknown"
+#            scalar; total number of fields in the group
+#            scalar; string giving the names of all fields in the group
+
+sub _count_fields {
+  my ( $self, $group ) = @_;
+
+  my $num_completed_fields = 0;
+  my $num_unknown_fields   = 0;
+  my $num_fields_in_group  = 0;
+
+  my $group_list = ref $group ? $group : [ $group ];
+  FIELD: foreach my $field_name ( @$group_list ) {
+    $num_fields_in_group++;
+    my $field_value = $self->_field_values->{$field_name};
+
+    next FIELD if not defined $field_value;
+
+    # if the field accepts "unknown" and the value actually IS "unknown"
+    # don't count it as a completed field
+    if ( $self->_field_defs->{$field_name}->{accepts_unknown} and
+         $self->_field_defs->{$field_name}->{__unknown_terms}->{$field_value} ) {
+      $num_unknown_fields++;
+      next FIELD;
+    }
+
+    # field is defined and not one of the allowed "unknown" terms; count it
+    # as completed
+    $num_completed_fields++;
+  }
+
+  return ( $num_completed_fields, $num_unknown_fields, $num_fields_in_group, $group_list );
 }
 
 #-------------------------------------------------------------------------------
@@ -388,63 +469,6 @@ sub _validate_if_dependencies {
 
     }
   } # end of "foreach if dependency"
-}
-
-#-------------------------------------------------------------------------------
-
-# checks that the row meets any specified "one_of" dependencies
-#
-# arguments: ref;    array containing fields for a given row
-#            ref;    scalar with the raw row string
-# returns:   no return value
-
-sub _validate_one_of_dependencies {
-  my ( $self, $row, $row_errors_ref ) = @_;
-
-  return unless ( defined $self->_config->get('dependencies') and
-                  exists $self->_config->get('dependencies')->{one_of} );
-
-  GROUP: while ( my ( $group_name, $group ) = each %{ $self->_config->get('dependencies')->{one_of} } ) {
-    my $num_completed_fields = 0;
-
-    my $group_list = ref $group ? $group : [ $group ];
-    FIELD: foreach my $field_name ( @$group_list ) {
-      $num_completed_fields++ if $self->_field_values->{$field_name};
-    }
-
-    if ( $num_completed_fields != 1 ) {
-      my $group_fields = join ', ', map { qq('$_') } @$group_list;
-      $$row_errors_ref .= " [exactly one field out of $group_fields should be completed (found $num_completed_fields)]";
-    }
-  }
-}
-
-#-------------------------------------------------------------------------------
-
-# checks that the row meets any specified "some_of" dependencies
-#
-# arguments: ref;    array containing fields for a given row
-#            ref;    scalar with the raw row string
-# returns:   no return value
-
-sub _validate_some_of_dependencies {
-  my ( $self, $row, $row_errors_ref ) = @_;
-
-  return unless ( defined $self->_config->get('dependencies') and
-                  exists $self->_config->get('dependencies')->{some_of} );
-
-  GROUP: while ( my ( $group_name, $group ) = each %{ $self->_config->get('dependencies')->{some_of} } ) {
-    my $num_completed_fields = 0;
-
-    my $group_list = ref $group ? $group : [ $group ];
-    FIELD: foreach my $field_name ( @$group_list ) {
-      $num_completed_fields++ if $self->_field_values->{$field_name};
-    }
-    if ( $num_completed_fields < 1 ) {
-      my $group_fields = join ', ', map { qq('$_') } @$group_list;
-      $$row_errors_ref .= " [at least one field out of $group_fields should be completed]";
-    }
-  }
 }
 
 #-------------------------------------------------------------------------------
