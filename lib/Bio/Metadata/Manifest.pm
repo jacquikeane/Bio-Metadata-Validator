@@ -240,7 +240,10 @@ sub get_csv_rows {
   my ( $self, $invalid_only ) = @_;
 
   # put the header line into the output CSV first
-  my @rows = ( $self->config->get('header_row') );
+  my @rows = ();
+
+  push @rows, $self->config->get('header_row')
+    if defined $self->config->get('header_row');
 
   my $n = 0;
   foreach my $row ( $self->all_rows ) {
