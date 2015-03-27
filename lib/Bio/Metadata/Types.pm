@@ -50,6 +50,8 @@ subtype 'Bio::Metadata::Types::PositiveInt',
   where { $_ > 0 },
   message { 'Not a positive integer' };
 
+enum 'Bio::Metadata::Types::AMREquality', [ qw( le lt eq gt ge ) ];
+
 #-------------------------------------------------------------------------------
 
 __PACKAGE__->meta->make_immutable;
