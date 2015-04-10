@@ -20,11 +20,11 @@ use Bio::Metadata::Validator::Exception;
 
 =head1 SYNOPSIS
 
- # create a config object
- my $config = Bio::Metadata::Config->new( config_file => 'hicf.conf', config_name => 'hicf' );
+ # create a checklist object
+ my $checklist = Bio::Metadata::Checklist->new( config_file => 'hicf.conf', config_name => 'hicf' );
 
  # create a reader
- my $reader= Bio::Metadata::Reader->new( config => $config );
+ my $reader= Bio::Metadata::Reader->new( checklist => $checklist );
 
  # read a CSV file and get a Bio::Metadata::Manifest
  my $manifest = $reader->read_csv( 'hicf.csv' );
@@ -51,7 +51,7 @@ path-help@sanger.ac.uk
 =attr verbose_errors
 
 flag showing whether error messages in the output file should include field
-descriptions from the checklist configuration
+descriptions from the checklist
 
 =cut
 
@@ -71,16 +71,16 @@ has '_valid_fields'      => ( is => 'rw', isa => 'HashRef' );
 has '_checked_if_config' => ( is => 'rw', isa => 'Bool', default => 0 );
 has '_checked_eo_config' => ( is => 'rw', isa => 'Bool', default => 0 );
 has '_unknown_terms'     => ( is => 'rw', isa => 'HashRef[Str]' );
-has '_config'            => ( is => 'rw', isa => 'Bio::Metadata::Config', trigger => \&_set_unknowns );
+has '_checklist'         => ( is => 'rw', isa => 'Bio::Metadata::Checklist', trigger => \&_set_unknowns );
 
 sub _set_unknowns {
-  my ( $self, $config ) = @_;
+  my ( $self, $checklist ) = @_;
 
-  # all of this is to avoid creating a ref to an empty array in the config. Using
-  # the "map" on an undefined slot appears to auto-vivify the array ref in the
-  # config, which makes one of the tests fail...
-  my %unknown_terms = defined $config->config->{unknown_term}
-                    ? map { $_ => 1 } @{ $config->config->{unknown_term} }
+  # all of this is to avoid creating a ref to an empty array in the checklist.
+  # Using the "map" on an undefined slot appears to auto-vivify the array ref
+  # in the checklist, which makes one of the tests fail...
+  my %unknown_terms = defined $checklist->config->{unknown_term}
+                    ? map { $_ => 1 } @{ $checklist->config->{unknown_term} }
                     : ();
 
   $self->_unknown_terms( \%unknown_terms );
@@ -116,7 +116,7 @@ sub validate {
   $manifest->reset;
 
   # store the configuration object for convenience
-  $self->_config( $manifest->config );
+  $self->_checklist( $manifest->checklist );
 
   my $row_num = 0;
   ROW: foreach my $row ( @{ $manifest->rows } ) {
@@ -144,9 +144,9 @@ sub validate {
     }
   }
 
-  # clean up the book-keeping hash keys that we put into the config as we do
-  # the validation
-  foreach my $field ( @{ $manifest->config->fields } ) {
+  # clean up the book-keeping hash keys that we put into the checklist config
+  # as we do the validation
+  foreach my $field ( @{ $manifest->checklist->fields } ) {
     delete $field->{__col_num};
     delete $field->{__unknown_terms};
   }
@@ -213,13 +213,13 @@ sub _validate_row {
   # keep track of the field definitions, hashed by field name
   my $field_definitions = {};
 
-  my $num_fields = scalar @{ $self->_config->get('field') };
+  my $num_fields = scalar @{ $self->_checklist->get('field') };
 
   FIELD: for ( my $i = 0; $i < $num_fields; $i++ ) {
     # retrieve the definition for this particular field, and add in its column
     # number for later. We also add a reference to the various "unknown" terms,
     # for use by the plugin role
-    my $field_definition = $self->_config->get('field')->[$i];
+    my $field_definition = $self->_checklist->get('field')->[$i];
     $field_definition->{__col_num} = $i;
     $field_definition->{__unknown_terms} = $self->_unknown_terms;
 
@@ -243,7 +243,7 @@ sub _validate_row {
       next FIELD;
     }
 
-    # look up the expected type for this field in the configuration
+    # look up the expected type for this field in the checklist configuration
     # and get the appropriate plugin
     my $plugin = $self->plugin_hash->{$field_type};
 
@@ -277,7 +277,7 @@ sub _validate_row {
   # dependencies on the individual fields hold
   $self->_validate_dependencies( $raw_values, $row_errors_ref );
 
-  # TODO there's nothing currently stopping the author of the config putting
+  # TODO there's nothing currently stopping the author of the checklist putting
   # TODO the same column in two dependencies, i.e. making a column subject to
   # TODO both an "if" and a "one_of". What happens in that case is undefined,
   # TODO so it would be sensible to set a flag on each column when it's first
@@ -301,11 +301,11 @@ sub _validate_dependencies {
   DEP_TYPE: foreach my $dep_type ( qw( one_of some_of ) ) {
 
     # we're immediately done here if there are no "one of" dependencies to check
-    next DEP_TYPE unless ( defined $self->_config->get('dependencies') and
-                           exists $self->_config->get('dependencies')->{$dep_type} );
+    next DEP_TYPE unless ( defined $self->_checklist->get('dependencies') and
+                           exists $self->_checklist->get('dependencies')->{$dep_type} );
 
     GROUP: while ( my ( $group_name, $group ) =
-                     each %{ $self->_config->get('dependencies')->{$dep_type} } ) {
+                     each %{ $self->_checklist->get('dependencies')->{$dep_type} } ) {
       my $counts = $self->_count_fields($group);
 
       # we don't consider it an error if all of the fields are unknowns
@@ -394,10 +394,10 @@ sub _count_fields {
 sub _validate_if_dependencies {
   my ( $self, $row, $row_errors_ref ) = @_;
 
-  return unless ( defined $self->_config->get('dependencies') and
-                  exists $self->_config->get('dependencies')->{if} );
+  return unless ( defined $self->_checklist->get('dependencies') and
+                  exists $self->_checklist->get('dependencies')->{if} );
 
-  IF: foreach my $if_col_name ( keys %{ $self->_config->get('dependencies')->{if} } ) {
+  IF: foreach my $if_col_name ( keys %{ $self->_checklist->get('dependencies')->{if} } ) {
 
     my $field_definition = $self->_field_defs->{$if_col_name};
     unless ( defined $field_definition ) {
@@ -420,8 +420,8 @@ sub _validate_if_dependencies {
       next IF;
     }
 
-    # before checking the fields themselves, a quick check on the configuration
-    # that we've been given...
+    # before checking the fields themselves, a quick check on the checklist
+    # configuration that we've been given...
     if ( not $self->_checked_if_config ) {
       unless ( $field_definition->{type} eq 'Bool' ) {
         Bio::Metadata::Validator::Exception::BadConfig->throw(
@@ -439,7 +439,7 @@ sub _validate_if_dependencies {
     # look up the column number for the field
     my $if_col_num = $field_definition->{__col_num};
 
-    my $dependency = $self->_config->get('dependencies')->{if}->{$if_col_name};
+    my $dependency = $self->_checklist->get('dependencies')->{if}->{$if_col_name};
 
     my $thens = ref $dependency->{then}  # (work around the Config::General
               ? $dependency->{then}      # behaviour of single element arrays

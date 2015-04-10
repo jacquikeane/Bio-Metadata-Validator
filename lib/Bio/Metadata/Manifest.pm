@@ -20,9 +20,9 @@ path-help@sanger.ac.uk
 
 # public attributes
 
-has 'config' => (
+has 'checklist' => (
   is       => 'ro',
-  isa      => 'Bio::Metadata::Config',
+  isa      => 'Bio::Metadata::Checklist',
   required => 1,
   handles  => [ 'field_names', 'fields' ],
 );
@@ -59,9 +59,9 @@ has 'md5' => ( is => 'rw', isa => 'Bio::Metadata::Types::MD5' );
 has 'uuid' => ( is => 'rw', isa => 'Bio::Metadata::Types::UUID' );
 has 'filename' => ( is => 'ro', isa => 'Str' );
 
-=attr config
+=attr checklist
 
-configuration object (L<Bio::Metadata::Config>); B<Read-only>; specify at
+checklist object (L<Bio::Metadata::Checklist>); B<Read-only>; specify at
 instantiation
 
 =attr rows
@@ -242,8 +242,8 @@ sub get_csv_rows {
   # put the header line into the output CSV first
   my @rows = ();
 
-  push @rows, $self->config->get('header_row')
-    if defined $self->config->get('header_row');
+  push @rows, $self->checklist->get('header_row')
+    if defined $self->checklist->get('header_row');
 
   my $n = 0;
   foreach my $row ( $self->all_rows ) {

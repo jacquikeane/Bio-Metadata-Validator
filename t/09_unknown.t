@@ -9,9 +9,9 @@ use Test::Exception;
 use Bio::Metadata::Validator;
 
 # test a bad config
-my $c = Bio::Metadata::Config->new( config_file => 't/data/09_unknown.conf',
-                                    config_name => 'if' );
-my $r = Bio::Metadata::Reader->new( config => $c );
+my $c = Bio::Metadata::Checklist->new( config_file => 't/data/09_unknown.conf',
+                                       config_name => 'if' );
+my $r = Bio::Metadata::Reader->new( checklist => $c );
 my $v = Bio::Metadata::Validator->new;
 my $m = $r->read_csv('t/data/09_unknown_simple.csv');
 

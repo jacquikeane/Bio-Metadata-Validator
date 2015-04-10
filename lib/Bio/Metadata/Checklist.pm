@@ -1,7 +1,7 @@
 
-package Bio::Metadata::Config;
+package Bio::Metadata::Checklist;
 
-# ABSTRACT: a class for handling config
+# ABSTRACT: a class representing a checklist
 
 use Moose;
 use namespace::autoclean;

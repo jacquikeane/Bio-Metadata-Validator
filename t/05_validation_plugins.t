@@ -33,9 +33,9 @@ isnt( Bio::Metadata::Validator::Plugin::Int->validate( {}    ), 1, '"Int" invali
 isnt( Bio::Metadata::Validator::Plugin::Int->validate( ''    ), 1, '"Int" invalidates "" correctly' );
 isnt( Bio::Metadata::Validator::Plugin::Int->validate( ' '   ), 1, '"Int" invalidates " " correctly' );
 
-my $c = Bio::Metadata::Config->new( config_file => 't/data/05_plugins.conf',
-                                    config_name => 'int' );
-my $r = Bio::Metadata::Reader->new(config => $c);
+my $c = Bio::Metadata::Checklist->new( config_file => 't/data/05_plugins.conf',
+                                       config_name => 'int' );
+my $r = Bio::Metadata::Reader->new(checklist => $c);
 my $v = Bio::Metadata::Validator->new;
 my $m = $r->read_csv('t/data/05_int.csv');
 
@@ -96,14 +96,14 @@ isnt( Bio::Metadata::Validator::Plugin::Bool->validate( {}      ), 1, '"Bool" in
 isnt( Bio::Metadata::Validator::Plugin::Bool->validate( 'abc'   ), 1, '"Bool" invalidates "abc" correctly' );
 
 # these next tests use mock ontology/taxonomy  files, with valid content but only a few terms
-$c = Bio::Metadata::Config->new( config_file => 't/data/05_ontology.conf' );
-$r->config($c);
+$c = Bio::Metadata::Checklist->new( config_file => 't/data/05_ontology.conf' );
+$r->checklist($c);
 $m = $r->read_csv('t/data/05_ontology.csv');
 
 _run_ontology_tests($m);
 
-$c = Bio::Metadata::Config->new( config_file => 't/data/05_taxonomy.conf' );
-$r->config($c);
+$c = Bio::Metadata::Checklist->new( config_file => 't/data/05_taxonomy.conf' );
+$r->checklist($c);
 $m = $r->read_csv('t/data/05_taxonomy.csv');
 
 _run_taxonomy_tests($m);
@@ -126,8 +126,8 @@ SKIP: {
   Test::CacheFile::cache( 'http://purl.obolibrary.org/obo/gaz.obo', 'gaz.obo' );
   Test::CacheFile::cache( 'http://www.brenda-enzymes.info/ontology/tissue/tree/update/update_files/BrendaTissueOBO', 'bto.obo' );
 
-  $c = Bio::Metadata::Config->new( config_file => 't/data/05_full_ontologies.conf' );
-  $r->config($c);
+  $c = Bio::Metadata::Checklist->new( config_file => 't/data/05_full_ontologies.conf' );
+  $r->checklist($c);
   $m = $r->read_csv('t/data/05_ontology.csv');
 
   _run_ontology_tests($m);
@@ -139,8 +139,8 @@ SKIP: {
   my $tar = Archive::Tar->new('.cached_test_files/taxdump.tar.gz');
   $tar->extract_file( 'names.dmp', '.cached_test_files/names.dmp' );
 
-  $c = Bio::Metadata::Config->new( config_file => 't/data/05_full_taxonomy.conf' );
-  $r->config($c);
+  $c = Bio::Metadata::Checklist->new( config_file => 't/data/05_full_taxonomy.conf' );
+  $r->checklist($c);
   $m = $r->read_csv('t/data/05_taxonomy.csv');
 
   _run_taxonomy_tests($m);

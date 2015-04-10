@@ -8,19 +8,19 @@ use Test::Exception;
 use File::Temp;
 use File::Slurp qw( read_file );
 
-use Bio::Metadata::Config;
+use Bio::Metadata::Checklist;
 use Bio::Metadata::Reader
 
 use_ok('Bio::Metadata::Manifest');
 
 my $m;
 throws_ok { $m = Bio::Metadata::Manifest->new }
-  qr/Attribute \(config\) is required/, 'exception when instantiating without a config';
+  qr/Attribute \(checklist\) is required/, 'exception when instantiating without a checklist';
 
-my $config = Bio::Metadata::Config->new( config_file => 't/data/03_manifest.conf' );
+my $checklist = Bio::Metadata::Checklist->new( config_file => 't/data/03_manifest.conf' );
 
-lives_ok { $m = Bio::Metadata::Manifest->new( config => $config ) }
-   'no exception when instantiating with a config';
+lives_ok { $m = Bio::Metadata::Manifest->new( checklist => $checklist ) }
+   'no exception when instantiating with a checklist';
 
 throws_ok { $m->md5('xxxxxxxxxxx') }
   qr/Attribute \(md5\) does not pass the type constraint/, 'exception when setting an invalid MD5';
@@ -37,8 +37,8 @@ my $expected_field_defs = [
 ];
 my $expected_field_names = [ qw( one two ) ];
 
-is_deeply( $m->fields,      $expected_field_defs,  'got expected fields from config via manifest' );
-is_deeply( $m->field_names, $expected_field_names, 'got expected field names from config via manifest' );
+is_deeply( $m->fields,      $expected_field_defs,  'got expected fields from checklist via manifest' );
+is_deeply( $m->field_names, $expected_field_names, 'got expected field names from checklist via manifest' );
 
 $m->add_rows( [ 1, 2 ], [ 3, 4 ], [ 5, 6 ] );
 $m->set_row_error( 2, '[error message]' );
@@ -100,11 +100,11 @@ is( $m->is_invalid, 0, '"is_invalid" correctly shows false' );
 # check that the Manifest that we get when we hand in a "rows" array ref
 # is the same as the Manifest that we get when reading a file
 
-my $r = Bio::Metadata::Reader->new( config => $config );
+my $r = Bio::Metadata::Reader->new( checklist => $checklist );
 my $read_manifest = $r->read_csv('t/data/03_manifest.csv');
 
 my $manifest_rows = [[1, 2], [3, 4], [5, 6]];
-my $built_manifest = Bio::Metadata::Manifest->new( config => $config, rows => $manifest_rows );
+my $built_manifest = Bio::Metadata::Manifest->new( checklist => $checklist, rows => $manifest_rows );
 
 # spoof the MD5 and UUID, which will necessarily differ between the two objects
 # otherwise

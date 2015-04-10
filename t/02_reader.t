@@ -6,21 +6,21 @@ use warnings;
 use Test::More tests => 18;
 use Test::Exception;
 
-use Bio::Metadata::Config;
+use Bio::Metadata::Checklist;
 
 use_ok('Bio::Metadata::Reader');
 
 my $r;
 throws_ok { $r = Bio::Metadata::Reader->new }
-  qr/Attribute \(config\) is required/, 'exception when instantiating without a config';
+  qr/Attribute \(checklist\) is required/, 'exception when instantiating without a config';
 
-throws_ok { $r = Bio::Metadata::Reader->new( config => {} ) }
-  qr/Attribute \(config\) does not pass the type constraint/,
+throws_ok { $r = Bio::Metadata::Reader->new( checklist => {} ) }
+  qr/Attribute \(checklist\) does not pass the type constraint/,
   'exception when passing in an invalid config object';
 
-my $config = Bio::Metadata::Config->new( config_file => 't/data/02_manifest.conf' );
+my $checklist = Bio::Metadata::Checklist->new( config_file => 't/data/02_manifest.conf' );
 
-lives_ok { $r = Bio::Metadata::Reader->new( config => $config ) }
+lives_ok { $r = Bio::Metadata::Reader->new( checklist => $checklist ) }
   'no exception with a valid B::M::Config object';
 
 throws_ok { $r->read_csv }

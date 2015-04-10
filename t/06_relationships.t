@@ -9,15 +9,15 @@ use Test::Exception;
 
 use Bio::Metadata::Validator;
 
-# test a bad config
-my $c = Bio::Metadata::Config->new( config_file => 't/data/06_relationships.conf',
-                                    config_name => 'broken' );
-my $r = Bio::Metadata::Reader->new( config => $c );
+# test a bad checklist
+my $c = Bio::Metadata::Checklist->new( config_file => 't/data/06_relationships.conf',
+                                       config_name => 'broken' );
+my $r = Bio::Metadata::Reader->new( checklist => $c );
 my $v = Bio::Metadata::Validator->new;
 my $m = $r->read_csv('t/data/06_if.csv');
 
 throws_ok { $v->validate($m) }
-  qr/fields with an 'if' dependency/, 'exception when validating against bad config ("if" field is not boolean)';
+  qr/fields with an 'if' dependency/, 'exception when validating against bad checklist ("if" field is not boolean)';
 
 # "if" relationships
 $c->config_name('if');

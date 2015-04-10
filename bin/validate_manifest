@@ -44,15 +44,15 @@ unless ( defined $file ) {
 }
 
 # get a config object
-my $config = Bio::Metadata::Config->new( config_file => $config_file );
+my $checklist = Bio::Metadata::Checklist->new( config_file => $config_file );
 
-# get a reader, configured using the same config object
-my $reader = Bio::Metadata::Reader->new( config => $config );
+# get a reader, configured using the same checklist object
+my $reader = Bio::Metadata::Reader->new( checklist => $checklist );
 
 # generate a manifest from the file
 my $manifest = $reader->read_csv($file);
 
-# get a validator using the config object
+# get a validator using the checklist object
 my $v = Bio::Metadata::Validator->new;
 
 $v->verbose_errors( $opt->verbose_errors );

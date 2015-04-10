@@ -9,7 +9,7 @@ use namespace::autoclean;
 use Text::CSV_XS;
 use Digest::MD5;
 
-use Bio::Metadata::Config;
+use Bio::Metadata::Checklist;
 use Bio::Metadata::Manifest;
 
 =head1 NAME
@@ -26,21 +26,20 @@ path-help@sanger.ac.uk
 
 # public attributes
 
-has 'config' => (
+has 'checklist' => (
   is       => 'rw',
-  isa      => 'Bio::Metadata::Config',
+  isa      => 'Bio::Metadata::Checklist',
   required => 1,
 );
 
-=attr config
+=attr checklist
 
-A reference to a L<Bio::Metadata::Config> configuration object. This config
-object will be passed to all L<Bio::Metadata::Manifest> objects created by this
-reader.
+A reference to a L<Bio::Metadata::Checklist> object. This checklist object will
+be passed to all L<Bio::Metadata::Manifest> objects created by this reader.
 
-Setting a new configuration after instantiation will only affect manifests
-created after that point; previously generated manifests will retain their
-reference to the original config object.
+Setting a new checklist after instantiation will only affect manifests created
+after that point; previously generated manifests will retain their reference to
+the original checklist object.
 
 =cut
 
@@ -65,8 +64,8 @@ sub read_csv {
   die "ERROR: no input file given"          unless defined $file;
   die "ERROR: no such input file ('$file')" unless -e $file;
 
-  # get the header row from the config
-  my $header = substr( $self->config->{header_row} || '', 0, 20 );
+  # get the header row from the checklist
+  my $header = substr( $self->checklist->{header_row} || '', 0, 20 );
 
   # add a flag to Text::CSV_XS to tell it to parse blank fields in the CSV
   # as undef, rather than "". This is important because when we come to load
@@ -78,7 +77,7 @@ sub read_csv {
   open my $fh, '<:encoding(utf8)', $file
     or die "ERROR: problems reading input CSV file: $!";
 
-  my $manifest = Bio::Metadata::Manifest->new( config => $self->config );
+  my $manifest = Bio::Metadata::Manifest->new( checklist => $self->checklist );
 
   # calculate an MD5 digest for the file
   my $digest = Digest::MD5->new;
