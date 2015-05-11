@@ -6,6 +6,8 @@ package Bio::Metadata::TaxTree;
 use Moose;
 use namespace::autoclean;
 
+use Bio::Metadata::Types qw( Tree );
+use MooseX::Types::Moose qw( Str ArrayRef Maybe );
 use Carp qw( croak );
 use Tree::Simple;
 
@@ -57,7 +59,7 @@ open L<FileHandle> for it. B<Read-only>; supply at instantiation.
 
 has 'nodes_file' => (
   is       => 'ro',
-  isa      => 'Str',
+  isa      => Str,
   required => 1,
 );
 
@@ -74,7 +76,7 @@ the array returned by C<$tree->nodes> will be empty (undef). B<Read-only>.
 
 has 'nodes' => (
   is       => 'ro',
-  isa      => 'ArrayRef[Maybe[Tree::Simple]]',
+  isa      => ArrayRef[Maybe[Tree]],
   writer   => '_set_nodes',
 );
 
@@ -89,7 +91,7 @@ tree. B<Read-only>.
 
 has 'tree' => (
   is     => 'ro',
-  isa    => 'Tree::Simple',
+  isa    => Tree,
   writer => '_set_tree',
 );
 

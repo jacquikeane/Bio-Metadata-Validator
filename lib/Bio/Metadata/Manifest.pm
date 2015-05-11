@@ -8,7 +8,8 @@ use namespace::autoclean;
 
 use File::Slurp qw( write_file );
 use Data::UUID;
-use Bio::Metadata::Types;
+use Bio::Metadata::Types qw( MD5 UUID );
+use MooseX::Types::Moose qw( ArrayRef Str );
 
 =head1 CONTACT
 
@@ -30,7 +31,7 @@ has 'checklist' => (
 has 'rows' => (
   traits  => ['Array'],
   is      => 'rw',
-  isa     => 'ArrayRef[ArrayRef]',
+  isa     => ArrayRef[ArrayRef],
   default => sub { [] },
   handles => {
     add_rows   => 'push',
@@ -45,7 +46,7 @@ has 'rows' => (
 has 'row_errors' => (
   traits  => ['Array'],
   is      => 'rw',
-  isa     => 'ArrayRef[Str]',
+  isa     => ArrayRef[Str],
   default => sub { [] },
   handles => {
     all_row_errors => 'elements',
@@ -55,9 +56,9 @@ has 'row_errors' => (
   },
 );
 
-has 'md5' => ( is => 'rw', isa => 'Bio::Metadata::Types::MD5' );
-has 'uuid' => ( is => 'rw', isa => 'Bio::Metadata::Types::UUID' );
-has 'filename' => ( is => 'ro', isa => 'Str' );
+has 'md5' => ( is => 'rw', isa => MD5 );
+has 'uuid' => ( is => 'rw', isa => UUID );
+has 'filename' => ( is => 'ro', isa => Str );
 
 =attr checklist
 

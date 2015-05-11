@@ -9,7 +9,8 @@ use namespace::autoclean;
 use DateTime::Format::ISO8601;
 use Try::Tiny;
 
-with 'MooseX::Role::Pluggable::Plugin', 'Bio::Metadata::Validator::PluginRole';
+with 'MooseX::Role::Pluggable::Plugin',
+     'Bio::Metadata::Validator::PluginRole';
 
 sub validate {
   my ( $self, $value ) = @_;

@@ -5,20 +5,20 @@ use warnings;
 use Test::More tests => 17;
 use Test::Exception;
 
-use_ok('Bio::Metadata::Types');
+BEGIN { use_ok('Bio::Metadata::Types', qw(MD5 UUID SIRTerm AntimicrobialName AMRString) ); }
 
 package Test::TypeTester;
 
 use Moose;
 use namespace::autoclean;
 
-use Bio::Metadata::Types;
+BEGIN { use Bio::Metadata::Types qw(MD5 UUID SIRTerm AntimicrobialName AMRString); }
 
-has md5  => ( is => 'rw', isa => 'Bio::Metadata::Types::MD5' );
-has uuid => ( is => 'rw', isa => 'Bio::Metadata::Types::UUID' );
-has sir  => ( is => 'rw', isa => 'Bio::Metadata::Types::SIRTerm' );
-has am   => ( is => 'rw', isa => 'Bio::Metadata::Types::AntimicrobialName' );
-has amr  => ( is => 'rw', isa => 'Bio::Metadata::Types::AMRString' );
+has md5  => ( is => 'rw', isa => MD5 );
+has uuid => ( is => 'rw', isa => UUID );
+has sir  => ( is => 'rw', isa => SIRTerm );
+has am   => ( is => 'rw', isa => AntimicrobialName );
+has amr  => ( is => 'rw', isa => AMRString );
 
 package main;
 
