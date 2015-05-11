@@ -11,6 +11,7 @@ use MooseX::Types -declare => [ qw(
   AMREquality
   SIRTerm
   OntologyName
+  OntologyTerm
   PositiveInt
   Tree
 ) ];
@@ -42,7 +43,8 @@ subtype AntimicrobialName,
 
 subtype AMRString,
   as Str,
-  where { m/(([A-Za-z0-9\-\/\(\)\s]+);([SIR]);(\d+)(;(\w+))?),?\s*/ },
+  where { m/(([A-Za-z0-9\-\/\(\)\s]+);([SIR]);(lt|le|eq|gt|ge)?(\d+)(;(\w+))?),?\s*/ },
+  # where { m/(([A-Za-z0-9\-\/\(\)\s]+);([SIR]);(\d+)(;(\w+))?),?\s*/ },
   message { 'Not a valid antimicrobial resistance test result' };
 # NOTE this regex isn't quite right. It will still allow broken AMR strings
 # after a comma, e.g. am1;S;10,am2. That second, incomplete term should mean
@@ -54,6 +56,11 @@ subtype SIRTerm,
   message { 'Not a valid susceptibility term' };
 
 enum OntologyName, [ qw( gazetteer envo brenda ) ];
+
+subtype OntologyTerm,
+  as Str,
+  where { m/^[A-Z]+:\d+$/ },
+  message { 'Not a valid ontology term' };
 
 subtype PositiveInt,
   as Int,

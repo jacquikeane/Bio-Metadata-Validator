@@ -2,23 +2,24 @@
 use strict;
 use warnings;
 
-use Test::More tests => 17;
+use Test::More tests => 22;
 use Test::Exception;
 
-BEGIN { use_ok('Bio::Metadata::Types', qw(MD5 UUID SIRTerm AntimicrobialName AMRString) ); }
+BEGIN { use_ok('Bio::Metadata::Types', qw(MD5 UUID SIRTerm AntimicrobialName AMRString OntologyTerm) ); }
 
 package Test::TypeTester;
 
 use Moose;
 use namespace::autoclean;
 
-BEGIN { use Bio::Metadata::Types qw(MD5 UUID SIRTerm AntimicrobialName AMRString); }
+BEGIN { use Bio::Metadata::Types qw(MD5 UUID SIRTerm AntimicrobialName AMRString OntologyTerm); }
 
 has md5  => ( is => 'rw', isa => MD5 );
 has uuid => ( is => 'rw', isa => UUID );
 has sir  => ( is => 'rw', isa => SIRTerm );
 has am   => ( is => 'rw', isa => AntimicrobialName );
 has amr  => ( is => 'rw', isa => AMRString );
+has ot   => ( is => 'rw', isa => OntologyTerm );
 
 package main;
 
@@ -41,14 +42,20 @@ throws_ok { $tt->am('am#') } qr/Not a valid anti/, 'exception with invalid amr';
 
 lives_ok { $tt->amr('am1;S;10') } 'can set valid antimicrobial resistance result';
 lives_ok { $tt->amr('am1;S;10;WTSI,am2;I;20,am3;R;30') } 'can set valid multi-term amr';
+lives_ok { $tt->amr('am1;I;ge20') } 'can set single amr with equality';
+lives_ok { $tt->amr('am1;S;10;WTSI,am2;I;lt20,am3;R;30') } 'can set valid multi-term amr with equality';
 throws_ok { $tt->amr('am#') } qr/Not a valid antimicrobial resistance/, 'exception with invalid amr';
 throws_ok { $tt->amr('am1;X;20') } qr/Not a valid antimicrobial resistance/, 'exception with invalid amr';
 throws_ok { $tt->amr('am1;S;a') } qr/Not a valid antimicrobial resistance/, 'exception with invalid amr';
+throws_ok { $tt->amr('am1;S;xx20') } qr/Not a valid antimicrobial resistance/, 'exception with invalid amr';
 
 TODO: {
   todo_skip 'amr regex needs to catch invalid amr strings after a comma', 1;
   throws_ok { $tt->amr('am1;S;10,am2;') } qr/Not a valid antimicrobial resistance/, 'exception with invalid amr';
 }
 
-done_testing();
+lives_ok { $tt->ot('ABC:123456') } 'can set valid ontology term';
+throws_ok { $tt->ot('ABC') } qr/Not a valid ontology term/, 'exception with invalid ontology term';
+
+done_testing;
 
