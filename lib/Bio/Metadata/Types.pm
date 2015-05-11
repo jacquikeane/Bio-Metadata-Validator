@@ -3,6 +3,9 @@ package Bio::Metadata::Types;
 
 # ABSTRACT: a type library for the metadata and related modules
 
+use strict;
+use warnings;
+
 use MooseX::Types -declare => [ qw(
   MD5
   UUID
@@ -44,7 +47,6 @@ subtype AntimicrobialName,
 subtype AMRString,
   as Str,
   where { m/(([A-Za-z0-9\-\/\(\)\s]+);([SIR]);(lt|le|eq|gt|ge)?(\d+)(;(\w+))?),?\s*/ },
-  # where { m/(([A-Za-z0-9\-\/\(\)\s]+);([SIR]);(\d+)(;(\w+))?),?\s*/ },
   message { 'Not a valid antimicrobial resistance test result' };
 # NOTE this regex isn't quite right. It will still allow broken AMR strings
 # after a comma, e.g. am1;S;10,am2. That second, incomplete term should mean
