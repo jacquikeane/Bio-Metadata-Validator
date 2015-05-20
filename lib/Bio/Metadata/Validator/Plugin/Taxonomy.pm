@@ -6,14 +6,16 @@ package Bio::Metadata::Validator::Plugin::Taxonomy;
 use Moose;
 use namespace::autoclean;
 
+use MooseX::Types::Moose qw( HashRef Str Int );
+
 use Carp qw( croak );
 
 with 'MooseX::Role::Pluggable::Plugin',
      'Bio::Metadata::Validator::PluginRole';
 
 # store the ontology terms in a set of hashes
-has '_ids'   => ( is => 'rw', isa => 'HashRef[Str]', default => sub { {} } );
-has '_names' => ( is => 'rw', isa => 'HashRef[Int]', default => sub { {} } );
+has '_ids'   => ( is => 'rw', isa => HashRef[Str], default => sub { {} } );
+has '_names' => ( is => 'rw', isa => HashRef[Int], default => sub { {} } );
 
 #-------------------------------------------------------------------------------
 

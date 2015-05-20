@@ -6,13 +6,15 @@ package Bio::Metadata::Validator::Plugin::Int;
 use Moose;
 use namespace::autoclean;
 
+use MooseX::Types::Moose qw( Int );
+
 with 'MooseX::Role::Pluggable::Plugin',
      'Bio::Metadata::Validator::PluginRole';
 
 sub validate {
   my ( $self, $value, $field_definition ) = @_;
 
-  return 0 unless $value =~ m/^\-?\d+$/;
+  return 0 unless is_Int($value);
   
   if ( $field_definition and ref $field_definition eq 'HASH' ) {
     my $max = $field_definition->{max};

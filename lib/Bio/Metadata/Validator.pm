@@ -11,6 +11,7 @@ use File::Slurp;
 use Digest::MD5 qw( md5_hex );
 use Term::ANSIColor;
 use Carp qw( croak );
+use MooseX::Types::Moose qw ( Bool HashRef Str );
 
 with 'MooseX::Role::Pluggable';
 
@@ -57,7 +58,7 @@ descriptions from the checklist
 
 has 'verbose_errors' => (
   is      => 'rw',
-  isa     => 'Bool',
+  isa     => Bool,
   default => 0,
 );
 
@@ -65,12 +66,12 @@ has 'verbose_errors' => (
 
 # private attributes
 
-has '_field_defs'        => ( is => 'rw', isa => 'HashRef' );
-has '_field_values'      => ( is => 'rw', isa => 'HashRef' );
-has '_valid_fields'      => ( is => 'rw', isa => 'HashRef' );
-has '_checked_if_config' => ( is => 'rw', isa => 'Bool', default => 0 );
-has '_checked_eo_config' => ( is => 'rw', isa => 'Bool', default => 0 );
-has '_unknown_terms'     => ( is => 'rw', isa => 'HashRef[Str]' );
+has '_field_defs'        => ( is => 'rw', isa => HashRef );
+has '_field_values'      => ( is => 'rw', isa => HashRef );
+has '_valid_fields'      => ( is => 'rw', isa => HashRef );
+has '_checked_if_config' => ( is => 'rw', isa => Bool, default => 0 );
+has '_checked_eo_config' => ( is => 'rw', isa => Bool, default => 0 );
+has '_unknown_terms'     => ( is => 'rw', isa => HashRef[Str] );
 has '_checklist'         => ( is => 'rw', isa => 'Bio::Metadata::Checklist', trigger => \&_set_unknowns );
 
 sub _set_unknowns {

@@ -10,33 +10,34 @@ use Config::General;
 use Carp qw( croak );
 use Try::Tiny;
 use File::Slurp qw( read_file );
+use MooseX::Types::Moose qw( Str HashRef );
 
 #-------------------------------------------------------------------------------
 
 # public attributes
 has 'config_file'  => (
   is       => 'ro',
-  isa      => 'Str',
+  isa      => Str,
   trigger  => \&_accept_config_file,
 );
 
 has 'config_string' => (
   is     => 'ro',
-  isa    => 'Str',
+  isa    => Str,
   writer => '_set_config_string',
   trigger => \&_accept_config_string,
 );
 
 has 'config_name' => (
   is       => 'rw',
-  isa      => 'Str',
+  isa      => Str,
   trigger  => \&_accept_config_name,
 );
 
 has 'config' => (
   traits  => ['Hash'],
   is      => 'ro',
-  isa     => 'HashRef',
+  isa     => HashRef,
   writer  => '_set_config',
   handles => { get => 'get' },
 );
@@ -67,7 +68,7 @@ B<Read-only>; set internally
 =cut
 
 # private attributes
-has '_full_config'   => ( is => 'rw', isa => 'HashRef' );
+has '_full_config'   => ( is => 'rw', isa => HashRef );
 
 #---------------------------------------
 
