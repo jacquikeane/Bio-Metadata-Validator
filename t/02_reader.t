@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 18;
+use Test::More tests => 19;
 use Test::Exception;
 
 use Bio::Metadata::Checklist;
@@ -28,6 +28,9 @@ throws_ok { $r->read_csv }
 
 throws_ok { $r->read_csv('non-existent file') }
   qr/no such input file/, 'exception with non-existent input file';
+
+throws_ok { $r->read_csv('t/data/02_excel.xlsx') }
+  qr/not a CSV file/, 'exception with non-ASCII input file (Excel document)';
 
 my $manifest;
 ok( $manifest = $r->read_csv('t/data/02_working_manifest.csv'), '"read" works with a valid manifest' );
