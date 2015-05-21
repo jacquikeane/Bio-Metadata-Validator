@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 22;
+use Test::More tests => 26;
 use Test::Exception;
 
 BEGIN { use_ok('Bio::Metadata::Types', qw(MD5 UUID SIRTerm AntimicrobialName AMRString OntologyTerm) ); }
@@ -43,11 +43,15 @@ throws_ok { $tt->am('am#') } qr/Not a valid anti/, 'exception with invalid amr';
 lives_ok { $tt->amr('am1;S;10') } 'can set valid antimicrobial resistance result';
 lives_ok { $tt->amr('am1;S;10;WTSI,am2;I;20,am3;R;30') } 'can set valid multi-term amr';
 lives_ok { $tt->amr('am1;I;ge20') } 'can set single amr with equality';
+lives_ok { $tt->amr('am1;I;ge20.0') } 'can set amr with mic as float (20.0)';
+lives_ok { $tt->amr('am1;I;ge0.2') }  'can set amr with mic as float (0.2)';
+lives_ok { $tt->amr('am1;I;ge.2') }   'can set amr with mic as float (.2)';
 lives_ok { $tt->amr('am1;S;10;WTSI,am2;I;lt20,am3;R;30') } 'can set valid multi-term amr with equality';
-throws_ok { $tt->amr('am#') } qr/Not a valid antimicrobial resistance/, 'exception with invalid amr';
-throws_ok { $tt->amr('am1;X;20') } qr/Not a valid antimicrobial resistance/, 'exception with invalid amr';
-throws_ok { $tt->amr('am1;S;a') } qr/Not a valid antimicrobial resistance/, 'exception with invalid amr';
-throws_ok { $tt->amr('am1;S;xx20') } qr/Not a valid antimicrobial resistance/, 'exception with invalid amr';
+throws_ok { $tt->amr('am#') } qr/Not a valid antimicrobial resistance/, 'exception with invalid amr (no sir or mic)';
+throws_ok { $tt->amr('am1;X;20') } qr/Not a valid antimicrobial resistance/, 'exception with invalid amr (sir eq "X")';
+throws_ok { $tt->amr('am1;S;a') } qr/Not a valid antimicrobial resistance/, 'exception with invalid amr (mic eq "a")';
+throws_ok { $tt->amr('am1;S;.') } qr/Not a valid antimicrobial resistance/, 'exception with invalid amr (mic eq ".")';
+throws_ok { $tt->amr('am1;S;xx20') } qr/Not a valid antimicrobial resistance/, 'exception with invalid amr (equality eq "xx")';
 
 TODO: {
   todo_skip 'amr regex needs to catch invalid amr strings after a comma', 1;
