@@ -8,6 +8,9 @@ use namespace::autoclean;
 
 use File::Slurp qw( write_file );
 use Data::UUID;
+use FileHandle;
+use Carp qw( croak );
+use Text::CSV_XS;
 use Bio::Metadata::Types qw( MD5 UUID );
 use MooseX::Types::Moose qw( ArrayRef Str );
 
@@ -93,6 +96,24 @@ B<Note> that the filename is only stored on the object. Use L<add_row> to add
 rows to the manifest.
 
 =cut
+
+# private attributes
+
+has '_csv' => (
+  is      => 'ro',
+  isa     => 'Text::CSV_XS',
+  default => sub {
+    my $csv = Text::CSV_XS->new;
+    $csv->eol("\n");
+    return $csv;
+  },
+);
+
+has '_fh' => (
+  is      => 'ro',
+  isa     => 'FileHandle',
+  default => sub { FileHandle->new },
+);
 
 #-------------------------------------------------------------------------------
 #- construction ----------------------------------------------------------------
@@ -207,8 +228,16 @@ included as the first line of the CSV string.
 
 sub get_csv {
   my ( $self, $invalid_only ) = @_;
-  my $csv = join "\n", $self->get_csv_rows($invalid_only);
-  return "$csv\n";
+
+  my $csv_string = '';
+
+  my $rows = $self->_get_csv_rows($invalid_only);
+  foreach my $row ( @$rows ) {
+    $self->_csv->combine(@$row);
+    $csv_string .= $self->_csv->string;
+  }
+
+  return $csv_string;
 }
 
 #-------------------------------------------------------------------------------
@@ -223,54 +252,92 @@ file.
 
 sub write_csv {
   my ( $self, $filename, $invalid_only ) = @_;
-  my $csv = join "\n", $self->get_csv_rows($invalid_only);
-  write_file( $filename, "$csv\n" );
+
+  $self->_fh->open($filename, '>')
+    or croak "ERROR: couldn't open output file for write: $!";
+
+  my $rows = $self->_get_csv_rows($invalid_only);
+  $self->_csv->print( $self->_fh, $_ ) for @$rows;
+
+  $self->_fh->close;
 }
 
 #-------------------------------------------------------------------------------
+#- private methods -------------------------------------------------------------
+#-------------------------------------------------------------------------------
 
-=head2 get_csv_rows($invalid_only)
+# Returns a references to an array containing the rows in the manifest. Each
+# row is given as a reference to an array containing the column values. If
+# C<$invalid_only> is set to true, only invalid rows will be included. The
+# header row will always be included as the first row of the array.
 
-Returns an array containing the rows of the current manifest in CSV format.  If
-C<$invalid_only> is set to true, only invalid rows will be included. The header
-row will always be included as the first row of the array.
-
-=cut
-
-sub get_csv_rows {
+sub _get_csv_rows {
   my ( $self, $invalid_only ) = @_;
 
   # put the header line into the output CSV first
   my @rows = ();
 
-  push @rows, $self->checklist->get('header_row')
-    if defined $self->checklist->get('header_row');
+  my @header_row = split ',', $self->checklist->get('header_row');
+  push @rows, \@header_row if defined scalar @header_row;
 
   my $n = 0;
-  foreach my $row ( $self->all_rows ) {
-    my $row_string;
-    # turn off warnings before trying to join an array with undefs
-    {
-      no warnings;
-      $row_string = join ',', @$row;
-    }
+  foreach my $original_row ( $self->all_rows ) {
+
+    # take a copy of the row array, so that we're not altering it if we push
+    # in error messages
+    my @row = @$original_row;
 
     # append any error messages to the row
-    my $invalid_row = $self->get_row_error($n);
-    $row_string .= ",$invalid_row" if $invalid_row;
+    my $row_error = $self->get_row_error($n);
+    push @row, $row_error if $row_error;
 
     if ( $invalid_only ) {
-      push @rows, $row_string if $invalid_row;
+      push @rows, \@row if $row_error;
     }
     else {
-      push @rows, $row_string;
+      push @rows, \@row;
     }
 
     $n++;
   }
 
-  return @rows;
+  return \@rows;
 }
+
+# sub get_csv_rows {
+#   my ( $self, $invalid_only ) = @_;
+#
+#   # put the header line into the output CSV first
+#   my @rows = ();
+#
+#   push @rows, $self->checklist->get('header_row')
+#     if defined $self->checklist->get('header_row');
+#
+#   my $n = 0;
+#   foreach my $row ( $self->all_rows ) {
+#     my $row_string;
+#     # turn off warnings before trying to join an array with undefs
+#     {
+#       no warnings;
+#       $row_string = join ',', @$row;
+#     }
+#
+#     # append any error messages to the row
+#     my $invalid_row = $self->get_row_error($n);
+#     $row_string .= ",$invalid_row" if $invalid_row;
+#
+#     if ( $invalid_only ) {
+#       push @rows, $row_string if $invalid_row;
+#     }
+#     else {
+#       push @rows, $row_string;
+#     }
+#
+#     $n++;
+#   }
+#
+#   return @rows;
+# }
 
 #-------------------------------------------------------------------------------
 
