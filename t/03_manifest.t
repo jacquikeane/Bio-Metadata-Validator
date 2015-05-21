@@ -99,6 +99,12 @@ my $read_manifest = $r->read_csv('t/data/03_manifest.csv');
 my $manifest_rows = [[1, 2], [3, 4], [5, 6]];
 my $built_manifest = Bio::Metadata::Manifest->new( checklist => $checklist, rows => $manifest_rows );
 
+# spoof the MD5 and UUID, which will necessarily differ between the two objects
+# # otherwise
+$built_manifest->md5( $read_manifest->md5 );
+$built_manifest->uuid( $read_manifest->uuid );
+$built_manifest->_set_fh($read_manifest->_fh);
+$built_manifest->_set_csv($read_manifest->_csv);
 is_deeply( $read_manifest->rows, $built_manifest->rows, 'built manifest matches read manifest' );
 
 done_testing;

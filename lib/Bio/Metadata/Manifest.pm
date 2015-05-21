@@ -102,6 +102,7 @@ rows to the manifest.
 has '_csv' => (
   is      => 'ro',
   isa     => 'Text::CSV_XS',
+  writer  => '_set_csv', # for testing
   default => sub {
     my $csv = Text::CSV_XS->new;
     $csv->eol("\n");
@@ -112,6 +113,7 @@ has '_csv' => (
 has '_fh' => (
   is      => 'ro',
   isa     => 'FileHandle',
+  writer  => '_set_fh', # for testing
   default => sub { FileHandle->new },
 );
 
