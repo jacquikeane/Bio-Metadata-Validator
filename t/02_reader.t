@@ -7,6 +7,7 @@ use Test::More tests => 19;
 use Test::Exception;
 
 use Bio::Metadata::Checklist;
+use Bio::Metadata::Types qw( UUID );
 
 use_ok('Bio::Metadata::Reader');
 
@@ -43,7 +44,8 @@ is( $manifest->rows->[1]->[1], 'two', 'got expected value on second row of manif
 is( $manifest->rows->[2]->[1], undef, 'got undef on third row of manifest' );
 
 is( $manifest->md5, '4dbc20b94e33929bc9d8832da698f130', 'MD5 checksum correctly set' );
-like( $manifest->uuid, qr/^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/i, 'UUID correctly set' );
+# like( $manifest->uuid, qr/^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/i, 'UUID correctly set' );
+ok( is_UUID($manifest->uuid), 'UUID correctly set' );
 
 ok( $manifest = $r->read_csv('t/data/02_working_manifest_with_cr.csv'), '"read" works for a manifest with carriage returns' );
 
