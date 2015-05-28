@@ -64,6 +64,9 @@ sub read_csv {
   die "ERROR: no input file given"          unless defined $file;
   die "ERROR: no such input file ('$file')" unless -e $file;
 
+  my $file_type = `file $file`;
+  die 'ERROR: not a CSV file' if ( $file_type and $file_type !~ m/ASCII text/ );
+
   # get the header row from the checklist
   my $header = substr( $self->checklist->{header_row} || '', 0, 20 );
 
