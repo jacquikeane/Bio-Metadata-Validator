@@ -99,8 +99,8 @@ my $read_manifest = $r->read_csv('t/data/03_manifest.csv');
 my $manifest_rows = [[1, 2], [3, 4], [5, 6]];
 my $built_manifest = Bio::Metadata::Manifest->new( checklist => $checklist, rows => $manifest_rows );
 
-# spoof the MD5 and UUID, which will necessarily differ between the two objects
-# # otherwise
+# spoof the MD5, UUID, filehandle and CSV object, which will necessarily differ
+# between the two objects otherwise
 $built_manifest->md5( $read_manifest->md5 );
 $built_manifest->uuid( $read_manifest->uuid );
 $built_manifest->_set_fh($read_manifest->_fh);

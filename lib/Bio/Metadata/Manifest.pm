@@ -306,41 +306,6 @@ sub _get_csv_rows {
   return \@rows;
 }
 
-# sub get_csv_rows {
-#   my ( $self, $invalid_only ) = @_;
-#
-#   # put the header line into the output CSV first
-#   my @rows = ();
-#
-#   push @rows, $self->checklist->get('header_row')
-#     if defined $self->checklist->get('header_row');
-#
-#   my $n = 0;
-#   foreach my $row ( $self->all_rows ) {
-#     my $row_string;
-#     # turn off warnings before trying to join an array with undefs
-#     {
-#       no warnings;
-#       $row_string = join ',', @$row;
-#     }
-#
-#     # append any error messages to the row
-#     my $invalid_row = $self->get_row_error($n);
-#     $row_string .= ",$invalid_row" if $invalid_row;
-#
-#     if ( $invalid_only ) {
-#       push @rows, $row_string if $invalid_row;
-#     }
-#     else {
-#       push @rows, $row_string;
-#     }
-#
-#     $n++;
-#   }
-#
-#   return @rows;
-# }
-
 #-------------------------------------------------------------------------------
 
 __PACKAGE__->meta->make_immutable;
