@@ -3,8 +3,8 @@ perl:
   - "5.14"
 sudo: false
 install:
-  - "cpanm Dist::Zilla"
-  - "dzil authordeps --missing | cpanm"
-  - "cpanm Pod::Elemental::Transformer::List"
-  - "dzil listdeps --missing | cpanm"
+  - 'cpanm Dist::Zilla'
+  - 'dzil authordeps --missing | cpanm'
+  - 'cpanm Pod::Elemental::Transformer::List'
+  - 'dzil listdeps --missing | cpanm'
 script: dzil test
