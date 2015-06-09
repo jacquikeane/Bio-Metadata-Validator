@@ -408,7 +408,7 @@ sub _validate_if_dependencies {
     }
 
     # if the field that defines the "if" dependencies is flagged as "unknown",
-    # all bets are off We can't work out which set of other fields (given by
+    # all bets are off. We can't work out which set of other fields (given by
     # the "then" or "else" blocks) should be required and valid
     next IF if ( $field_definition->{accepts_unknown} and
                  defined $self->_valid_fields->{$if_col_name} and
@@ -449,7 +449,11 @@ sub _validate_if_dependencies {
               ? $dependency->{else}
               : [ $dependency->{else} ];
 
-    if ( $row->[$if_col_num] ) {
+    # check for the allowed "true" values. These must match up with those permitted
+    # by the Bool validator plugin (Bio::Metadata::Validator::Plugin::Bool)
+    if ( $row->[$if_col_num] eq 'true' or
+         $row->[$if_col_num] eq 'yes'  or
+         $row->[$if_col_num] eq '1' ) {
 
       # true; check that the "then" columns are valid
       foreach my $then_col_name ( @$thens ) {
