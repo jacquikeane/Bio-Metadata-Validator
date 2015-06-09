@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 20;
+use Test::More tests => 21;
 use Test::Exception;
 use File::Temp;
 use File::Slurp qw( read_file );
@@ -41,7 +41,7 @@ my $expected_field_names = [ qw( one two ) ];
 is_deeply( $m->fields,      $expected_field_defs,  'got expected fields from checklist via manifest' );
 is_deeply( $m->field_names, $expected_field_names, 'got expected field names from checklist via manifest' );
 
-$m->add_rows( [ '1,1', 2 ], [ 3, 4 ], [ 5, 6 ] );
+$m->add_rows( [ '1,1', 2, undef ], [ 3, 4, undef ], [ 5, 6, undef ], [ undef, undef, undef ] );
 $m->set_row_error( 2, '[error message]' );
 
 is( $m->row_count, 3, 'starting with 3 rows' );
@@ -105,7 +105,21 @@ $built_manifest->md5( $read_manifest->md5 );
 $built_manifest->uuid( $read_manifest->uuid );
 $built_manifest->_set_fh($read_manifest->_fh);
 $built_manifest->_set_csv($read_manifest->_csv);
-is_deeply( $read_manifest->rows, $built_manifest->rows, 'built manifest matches read manifest' );
+is_deeply( $read_manifest, $built_manifest, 'built manifest matches read manifest' );
+
+# make sure that the Manifest chops off the trailing undef fields that are so
+# beloved of Excel...
+$read_manifest = $r->read_csv('t/data/03_manifest_with_trailing_commas.csv');
+
+$built_manifest = Bio::Metadata::Manifest->new( checklist => $checklist, rows => $manifest_rows );
+$built_manifest->md5( $read_manifest->md5 );
+$built_manifest->uuid( $read_manifest->uuid );
+$built_manifest->_set_fh($read_manifest->_fh);
+$built_manifest->_set_csv($read_manifest->_csv);
+
+is_deeply( $read_manifest, $built_manifest, 'built manifest matches read manifest with trailing commas' );
+
+$DB::single = 1;
 
 done_testing;
 
