@@ -93,8 +93,15 @@ sub _around_add_rows {
 
     # now we know that there are actual values in the fields of this row.
     # Truncate the row to the same length as the checklist header row
-    splice @$row, $self->_num_fields;
+    my @chopped_fields = splice @$row, $self->_num_fields;
 
+    # let the user know if we're throwing away data in those removed columns
+    my $joined_chopped_fields = join ', ', @chopped_fields;
+
+    warn "WARNING: found data in unused fields ($joined_chopped_fields)"
+      if join('', @chopped_fields) ne '';
+
+    # and finally, store the remaining row data
     push @output_rows, $row;
   }
 
@@ -123,9 +130,13 @@ sub _around_add_row {
       warn "WARNING: refusing to add an empty row to the manifest";
       return $self->$orig(@_);
     }
-  }
 
-  splice @$row, $self->_num_fields;
+    my @chopped_fields = splice @$row, $self->_num_fields;
+
+    my $joined_chopped_fields = join ', ', @chopped_fields;
+    warn "WARNING: found data in unused fields ($joined_chopped_fields)"
+      if join('', @chopped_fields) ne '';
+  }
 
   return $self->$orig($row);
 }

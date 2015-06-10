@@ -3,8 +3,9 @@
 use strict;
 use warnings;
 
-use Test::More tests => 21;
+use Test::More tests => 22;
 use Test::Exception;
+use Test::Warn;
 use File::Temp;
 use File::Slurp qw( read_file );
 
@@ -41,7 +42,12 @@ my $expected_field_names = [ qw( one two ) ];
 is_deeply( $m->fields,      $expected_field_defs,  'got expected fields from checklist via manifest' );
 is_deeply( $m->field_names, $expected_field_names, 'got expected field names from checklist via manifest' );
 
-$m->add_rows( [ '1,1', 2, undef ], [ 3, 4, undef ], [ 5, 6, undef ], [ undef, undef, undef ] );
+warning_like {
+  $m->add_rows( [ '1,1', 2, undef ], [ 3, 4, undef ], [ 5, 6, 'value in unused field' ],
+    [ undef, undef, undef ] )
+}
+  qr/data in unused fields/, 'got warning about data in unused fields';
+
 $m->set_row_error( 2, '[error message]' );
 
 is( $m->row_count, 3, 'starting with 3 rows' );
