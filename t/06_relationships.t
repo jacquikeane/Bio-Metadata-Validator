@@ -10,8 +10,7 @@ use Test::Exception;
 use Bio::Metadata::Validator;
 
 # test a bad checklist
-my $c = Bio::Metadata::Checklist->new( config_file => 't/data/06_relationships.conf',
-                                       config_name => 'broken' );
+my $c = Bio::Metadata::Checklist->new( config_file => 't/data/06_broken.conf' );
 my $r = Bio::Metadata::Reader->new( checklist => $c );
 my $v = Bio::Metadata::Validator->new;
 my $m = $r->read_csv('t/data/06_if.csv');
@@ -20,7 +19,9 @@ throws_ok { $v->validate($m) }
   qr/fields with an 'if' dependency/, 'exception when validating against bad checklist ("if" field is not boolean)';
 
 # "if" relationships
-$c->config_name('if');
+$c = Bio::Metadata::Checklist->new( config_file => 't/data/06_if.conf' );
+$r->checklist($c);
+$m = $r->read_csv('t/data/06_if.csv');
 is( $v->validate($m), 0, 'broken "if" relationship input file marked as invalid' );
 is( $m->invalid_row_count, 10, 'got expected number of invalid rows (10)' );
 
@@ -39,7 +40,8 @@ like( $m->row_errors->[10], qr/^\[errors found on row 11] \[field 'two' should n
 like( $m->row_errors->[13], qr/^\[errors found on row 14] \[field 'seven'.*? \[field 'eight'.*?]$/, 'two errors with second "if" when dependency columns not correct' );
 
 # "one_of" relationships
-$c->config_name('one_of');
+$c = Bio::Metadata::Checklist->new( config_file => 't/data/06_one_of.conf' );
+$r->checklist($c);
 $m = $r->read_csv('t/data/06_one_of.csv');
 is( $v->validate($m), 0, 'broken "one of" relationship input file marked as invalid' );
 is( $m->invalid_row_count, 4, 'got expected number of invalid rows (4)' );
@@ -52,7 +54,8 @@ like( $m->row_errors->[4], qr/\[exactly one field out of 'three'.*?found 3.*?]$/
 is(   $m->row_errors->[5], undef, 'no errors with no valid fields in "one of" with all optional fields' );
 
 # "some_of" relationships
-$c->config_name('some_of');
+$c = Bio::Metadata::Checklist->new( config_file => 't/data/06_some_of.conf' );
+$r->checklist($c);
 $m = $r->read_csv('t/data/06_some_of.csv');
 is( $v->validate($m), 0, 'broken "some of" relationship input file marked as invalid' );
 is( $m->invalid_row_count, 2, 'got expected number of invalid rows (2)' );
@@ -64,5 +67,5 @@ like( $m->row_errors->[3], qr/^\[errors found on row 4] \['one' is a required fi
 is(   $m->row_errors->[4], undef, 'no error with all fields empty in "some-of" with no required fields' );
 is(   $m->row_errors->[5], undef, 'no error with all fields full in three-field "some-of"' );
 
-done_testing();
+done_testing;
 

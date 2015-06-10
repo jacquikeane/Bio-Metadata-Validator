@@ -33,8 +33,7 @@ isnt( Bio::Metadata::Validator::Plugin::Int->validate( {}    ), 1, '"Int" invali
 isnt( Bio::Metadata::Validator::Plugin::Int->validate( ''    ), 1, '"Int" invalidates "" correctly' );
 isnt( Bio::Metadata::Validator::Plugin::Int->validate( ' '   ), 1, '"Int" invalidates " " correctly' );
 
-my $c = Bio::Metadata::Checklist->new( config_file => 't/data/05_plugins.conf',
-                                       config_name => 'int' );
+my $c = Bio::Metadata::Checklist->new( config_file => 't/data/05_int.conf' );
 my $r = Bio::Metadata::Reader->new(checklist => $c);
 my $v = Bio::Metadata::Validator->new;
 my $m = $r->read_csv('t/data/05_int.csv');
@@ -62,7 +61,8 @@ TODO: {
   isnt( Bio::Metadata::Validator::Plugin::Str->validate( '§'   ), 1, '"Str" invalidates "§" correctly' );
 }
 
-$c->config_name('str');
+$c = Bio::Metadata::Checklist->new( config_file => 't/data/05_str.conf' );
+$r->checklist($c);
 $m = $r->read_csv('t/data/05_str.csv');
 
 is( $v->validate($m), 0, 'found invalid Str fields in test CSV' );

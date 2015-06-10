@@ -9,14 +9,12 @@ use Test::Exception;
 use Bio::Metadata::Validator;
 
 # test a bad config
-my $c = Bio::Metadata::Checklist->new( config_file => 't/data/09_unknown.conf',
-                                       config_name => 'if' );
+my $c = Bio::Metadata::Checklist->new( config_file => 't/data/09_unknown.conf' );
 my $r = Bio::Metadata::Reader->new( checklist => $c );
 my $v = Bio::Metadata::Validator->new;
 my $m = $r->read_csv('t/data/09_unknown_simple.csv');
 
 # simple unknown values
-$c->config_name('unknown');
 is( $v->validate($m), 0, 'simple input file marked as invalid' );
 is( $m->invalid_row_count, 2, 'got expected number of invalid rows (2)' );
 
@@ -29,8 +27,9 @@ like( $m->row_errors->[4], qr/^\[errors found on row 5] \[value in field 'two' i
 like( $m->row_errors->[5], qr/^\[errors found on row 6] \[value in field 'one' is not valid]/, 'error with an "unknown" term in a field that does not allow it' );
 
 # "if" relationships
+$c = Bio::Metadata::Checklist->new( config_file => 't/data/09_if.conf' );
+$r->checklist($c);
 $m = $r->read_csv('t/data/09_unknown_if.csv');
-$c->config_name('if');
 is( $v->validate($m), 0, '"if" input file marked as invalid' );
 is( $m->invalid_row_count, 3, 'got expected number of invalid rows (3)' );
 
@@ -45,7 +44,8 @@ is( $m->row_errors->[6], undef, 'no error with correctly used unknown in "if" de
 like( $m->row_errors->[7], qr/^\[errors found on row 8] \[value in field 'one' .*?]/, 'error with an invalid "unknown" value' );
 
 # "one_of" relationships
-$c->config_name('one_of');
+$c = Bio::Metadata::Checklist->new( config_file => 't/data/09_one_of.conf' );
+$r->checklist($c);
 $m = $r->read_csv('t/data/09_unknown_one_of.csv');
 is( $v->validate($m), 1, '"one of" input file marked as valid' );
 is( $m->invalid_row_count, 0, 'got expected number of invalid rows (0)' );
@@ -57,7 +57,8 @@ is( $m->row_errors->[3], undef, 'no error with both fields "unknown" in a group'
 is( $m->row_errors->[4], undef, 'no error with one "unknown" and one valid field in a group' );
 
 # "some_of" relationships
-$c->config_name('some_of');
+$c = Bio::Metadata::Checklist->new( config_file => 't/data/09_some_of.conf' );
+$r->checklist($c);
 $m = $r->read_csv('t/data/09_unknown_some_of.csv');
 is( $v->validate($m), 0, '"some of" input file marked as invalid' );
 is( $m->invalid_row_count, 1, 'got expected number of invalid rows (1)' );

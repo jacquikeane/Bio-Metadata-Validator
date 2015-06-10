@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 19;
+use Test::More tests => 20;
 use Test::Exception;
 
 use Bio::Metadata::Checklist;
@@ -51,6 +51,8 @@ ok( $manifest = $r->read_csv('t/data/02_working_manifest_with_cr.csv'), '"read" 
 is( $manifest->md5, 'e24004218b8d2f7c1947198c2b933b57', 'MD5 checksum correctly set' );
 is( $manifest->row_count, 3, 'got expected number of rows in manifest' );
 is( $manifest->rows->[-1]->[-1], 'three', 'got expected value on last row of manifest' );
+
+ok( $manifest = $r->read_csv('t/data/02_working_manifest_with_trailing_commas.csv'), '"read" works for a manifest with trailing commas' );
 
 done_testing;
 
