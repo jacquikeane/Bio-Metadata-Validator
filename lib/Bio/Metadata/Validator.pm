@@ -22,7 +22,7 @@ use Bio::Metadata::Validator::Exception;
 =head1 SYNOPSIS
 
  # create a checklist object
- my $checklist = Bio::Metadata::Checklist->new( config_file => 'hicf.conf', config_name => 'hicf' );
+ my $checklist = Bio::Metadata::Checklist->new( config_file => 'hicf.conf' );
 
  # create a reader
  my $reader= Bio::Metadata::Reader->new( checklist => $checklist );

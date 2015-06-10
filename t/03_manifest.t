@@ -119,7 +119,5 @@ $built_manifest->_set_csv($read_manifest->_csv);
 
 is_deeply( $read_manifest, $built_manifest, 'built manifest matches read manifest with trailing commas' );
 
-$DB::single = 1;
-
 done_testing;
 

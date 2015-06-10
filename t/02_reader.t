@@ -3,8 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More;
-# use Test::More tests => 19;
+use Test::More tests => 20;
 use Test::Exception;
 
 use Bio::Metadata::Checklist;
@@ -54,8 +53,6 @@ is( $manifest->row_count, 3, 'got expected number of rows in manifest' );
 is( $manifest->rows->[-1]->[-1], 'three', 'got expected value on last row of manifest' );
 
 ok( $manifest = $r->read_csv('t/data/02_working_manifest_with_trailing_commas.csv'), '"read" works for a manifest with trailing commas' );
-
-$DB::single = 1;
 
 done_testing;
 

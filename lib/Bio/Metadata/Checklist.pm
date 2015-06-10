@@ -28,12 +28,6 @@ has 'config_string' => (
   trigger => \&_accept_config_string,
 );
 
-has 'config_name' => (
-  is       => 'rw',
-  isa      => Str,
-  trigger  => \&_accept_config_name,
-);
-
 has 'config' => (
   traits  => ['Hash'],
   is      => 'ro',
@@ -52,10 +46,6 @@ C<config_file> or C<config_string>. B<Read-only>; specify at instantiation
 a configuration string that specifies the checklist. Must supply either
 C<config_file> or C<config_string>. B<Read-only>; specify at instantiation
 
-=attr config_name
-
-the name of the configuration to use; mainly intended for testing.
-
 =attr config
 
 the current active configuration. B<Read-only>; set internally
@@ -66,9 +56,6 @@ the contents of the full configuration file, stored as a single string.
 B<Read-only>; set internally
 
 =cut
-
-# private attributes
-has '_full_config'   => ( is => 'rw', isa => HashRef );
 
 #---------------------------------------
 
@@ -99,35 +86,15 @@ sub _accept_config_string {
     croak "ERROR: could not load configuration: $_";
   };
 
-  my %config = $cg->getall;
+  my %full_config = $cg->getall;
+  my $cl = $full_config{checklist};
 
-  # store the full config
-  $self->_full_config( \%config );
+  croak 'ERROR: there appear to be multiple configurations in the supplied config string or file'
+    if scalar keys %$cl > 1;
 
-  if ( defined $self->config_name and
-       exists $self->_full_config->{checklist}->{$self->config_name} ) {
-    # we're looking for a configuration section with a specific name
-    $self->_set_config( $self->_full_config->{checklist}->{$self->config_name} );
-  }
-  else {
-    # load any config from the file
-    my ( $name, $config ) = each %{ $self->_full_config->{checklist} };
-    $self->_set_config($config);
-  }
-}
+  my @config_names = sort { $cl->{$a} <=> $cl->{$b} } keys %$cl;
 
-#---------------------------------------
-
-sub _accept_config_name {
-  my $self = shift;
-
-  croak "ERROR: there is no config named '" . $self->config_name . "'\n"
-    unless exists $self->_full_config->{checklist}->{$self->config_name};
-
-  $self->_set_config( $self->_full_config->{checklist}->{$self->config_name} );
-
-  croak "ERROR: failed to load specified config'\n"
-    unless defined $self->config;
+  $self->_set_config( $cl->{$config_names[0] } );
 }
 
 #-------------------------------------------------------------------------------
