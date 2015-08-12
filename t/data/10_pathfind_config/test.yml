@@ -1,0 +1,3 @@
+host: patt-db
+port: 3346
+user: pathpipe_ro

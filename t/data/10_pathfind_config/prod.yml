@@ -1,0 +1,3 @@
+host: patp-db
+port: 3347
+user: pathpipe_ro
