@@ -17,8 +17,9 @@ use MooseX::Types -declare => [ qw(
   OntologyTerm
   PositiveInt
   Tree
+  IDType
 ) ];
-use MooseX::Types::Moose qw( Str Int );
+use MooseX::Types::Moose qw( Str Int ArrayRef );
 use namespace::autoclean;
 
 =head1 CONTACT
@@ -72,6 +73,16 @@ subtype PositiveInt,
 enum AMREquality, [ qw( le lt eq gt ge ) ];
 
 class_type Tree, { class => 'Tree::Simple' };
+
+enum IDType, [ qw(
+  lane
+  sample
+  database
+  study
+  file
+  library
+  species
+) ];
 
 #-------------------------------------------------------------------------------
 
