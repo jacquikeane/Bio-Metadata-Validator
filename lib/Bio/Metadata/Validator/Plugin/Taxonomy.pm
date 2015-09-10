@@ -11,7 +11,7 @@ use MooseX::Types::Moose qw( HashRef Str Int );
 use Carp qw( croak );
 
 with 'MooseX::Role::Pluggable::Plugin',
-     'Bio::Metadata::Validator::PluginRole';
+     'Bio::Metadata::Role::ValidatorPlugin';
 
 # store the ontology terms in a set of hashes
 has '_ids'   => ( is => 'rw', isa => HashRef[Str], default => sub { {} } );

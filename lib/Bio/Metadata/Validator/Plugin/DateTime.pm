@@ -10,7 +10,7 @@ use DateTime::Format::ISO8601;
 use Try::Tiny;
 
 with 'MooseX::Role::Pluggable::Plugin',
-     'Bio::Metadata::Validator::PluginRole';
+     'Bio::Metadata::Role::ValidatorPlugin';
 
 sub validate {
   my ( $self, $value ) = @_;

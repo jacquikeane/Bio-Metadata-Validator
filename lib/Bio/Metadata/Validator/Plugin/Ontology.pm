@@ -9,7 +9,7 @@ use namespace::autoclean;
 use MooseX::Types::Moose qw( HashRef Str );
 
 with 'MooseX::Role::Pluggable::Plugin',
-     'Bio::Metadata::Validator::PluginRole';
+     'Bio::Metadata::Role::ValidatorPlugin';
 
 # store the ontology terms in a set of hashes
 has '_ontologies' => ( is => 'rw', isa => HashRef[Str], default => sub { {} } );

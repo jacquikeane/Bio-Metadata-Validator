@@ -7,7 +7,7 @@ use Moose;
 use namespace::autoclean;
 
 with 'MooseX::Role::Pluggable::Plugin',
-     'Bio::Metadata::Validator::PluginRole';
+     'Bio::Metadata::Role::ValidatorPlugin';
 
 sub validate {
   my ( $self, $value, $field_definition ) = @_;

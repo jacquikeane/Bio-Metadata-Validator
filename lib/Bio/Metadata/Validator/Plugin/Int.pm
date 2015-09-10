@@ -9,7 +9,7 @@ use namespace::autoclean;
 use MooseX::Types::Moose qw( Int );
 
 with 'MooseX::Role::Pluggable::Plugin',
-     'Bio::Metadata::Validator::PluginRole';
+     'Bio::Metadata::Role::ValidatorPlugin';
 
 sub validate {
   my ( $self, $value, $field_definition ) = @_;
