@@ -11,7 +11,7 @@ use File::Slurp qw( read_file );
 
 use Bio::Metadata::Checklist;
 use Bio::Metadata::Reader;
-use Bio::Metadata::Types qw( MD5 UUID );
+use Bio::Metadata::Types qw( MD5 +UUID );
 
 use_ok('Bio::Metadata::Manifest');
 

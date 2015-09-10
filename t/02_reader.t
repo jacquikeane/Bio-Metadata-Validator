@@ -7,7 +7,7 @@ use Test::More tests => 20;
 use Test::Exception;
 
 use Bio::Metadata::Checklist;
-use Bio::Metadata::Types qw( UUID );
+use Bio::Metadata::Types qw( +UUID );
 
 use_ok('Bio::Metadata::Reader');
 
