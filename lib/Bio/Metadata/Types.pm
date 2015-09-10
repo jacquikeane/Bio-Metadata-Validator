@@ -18,6 +18,7 @@ use MooseX::Types -declare => [ qw(
   PositiveInt
   Tree
   IDType
+  Environment
 ) ];
 use MooseX::Types::Moose qw( Str Int ArrayRef );
 use namespace::autoclean;
@@ -83,6 +84,8 @@ enum IDType, [ qw(
   library
   species
 ) ];
+
+enum Environment, [ qw( test prod ) ];
 
 #-------------------------------------------------------------------------------
 
