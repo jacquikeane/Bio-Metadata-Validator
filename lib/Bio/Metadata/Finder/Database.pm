@@ -173,7 +173,49 @@ sub _build_data_sources {
 
 #---------------------------------------
 
-=attr available_databases
+=attr available_database_schemas
+
+A reference to an array containing L<DBIx::Class::Schema|DBIC schema> objects
+for the available databases, as given by L<available_database_names>.
+
+See L<available_database_names> for an explanation of what constitutes an
+"available" database.
+
+=cut
+
+has 'available_database_schemas' => (
+  is      => 'ro',
+  isa     => 'ArrayRef[Bio::Track::Schema]',
+  lazy    => 1,
+  writer  => '_set_available_database_schemas',
+  builder => '_build_available_database_schemas',
+);
+
+  # NOTE This could be horrible memory hungry. If we create a new schema object
+  # for every N databases and each one used M mb of memory, we could end up
+  # using N * M mb if we do this. It might be safer to generate and destroy
+  # each schema in turn
+
+  # TODO profile this and see how bad it is
+
+sub _build_available_database_schemas {
+  my $self = shift;
+
+  my $db_list = $self->available_database_names;
+
+  my @schemas;
+  foreach my $db_name ( @$db_list ) {
+    my $schema = $self->get_schema($db_name);
+    next unless defined $schema;
+    push @schemas, $schema;
+  }
+
+  return \@schemas;
+}
+
+#---------------------------------------
+
+=attr available_database_names
 
 A reference to an array containing the names of live, searchable, production
 pathogen databases.
@@ -195,15 +237,15 @@ searched first.
 
 =cut
 
-has 'available_databases' => (
+has 'available_database_names' => (
   is      => 'ro',
   isa     => ArrayRef[Str],
   lazy    => 1,
-  writer  => '_set_available_databases',
-  builder => '_build_available_databases',
+  writer  => '_set_available_database_names',
+  builder => '_build_available_database_names',
 );
 
-sub _build_available_databases {
+sub _build_available_database_names {
   my $self = shift;
 
   my $db_list = [];
@@ -262,13 +304,15 @@ specified in the config, the method returns C<undef>.
 sub get_schema {
   my ( $self, $db_name ) = @_;
 
-  my %pathogen_database_names = map { $_ => 1 } @{ $self->available_databases };
+  my %pathogen_database_names = map { $_ => 1 } @{ $self->available_database_names };
 
   return unless $pathogen_database_names{$db_name};
 
   my $c = $self->_config->{connection_params};
   my $schema;
   if ( $self->environment eq 'test' ) {
+    croak 'ERROR: must specify SQLite DB location as "connection:dbname" in test config'
+      unless $c->{dbname};
     $schema = Bio::Track::Schema->connect('dbi:SQLite:dbname=' . $c->{dbname});
   }
   else {

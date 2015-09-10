@@ -55,10 +55,10 @@ my $expected_connection = {
 };
 
 $d = Bio::Metadata::Finder::Database->new(environment => 'test', config_file => 't/data/12_finder_database/test.conf');
-is_deeply $d->production_dbs,      $expected_dbs,           'got expected production DBs from test config';
-is_deeply $d->connection_params,   $expected_connection,    'got expected connection params from test config';
-is_deeply $d->data_sources,        ['pathogen_test_track'], 'got expected data source in test mode';
-is_deeply $d->available_databases, ['pathogen_test_track'], 'got expected list of available databases in test mode';
+is_deeply $d->production_dbs,           $expected_dbs,           'got expected production DBs from test config';
+is_deeply $d->connection_params,        $expected_connection,    'got expected connection params from test config';
+is_deeply $d->data_sources,             ['pathogen_test_track'], 'got expected data source in test mode';
+is_deeply $d->available_database_names, ['pathogen_test_track'], 'got expected list of names of available databases in test mode';
 
 is $d->get_schema('no_such_db'), undef, 'got undef for unknown schema';
 
@@ -67,6 +67,10 @@ lives_ok { $schema = $d->get_schema('pathogen_test_track') }
   'got schema successfully';
 isa_ok $schema, 'Bio::Track::Schema', 'schema';
 isa_ok $schema, 'DBIx::Class::Schema', 'schema';
+
+my $schemas = $d->available_database_schemas;
+is scalar @$schemas, 1, 'got one schema from "available_database_schemas"';
+isa_ok $schemas->[0], 'Bio::Track::Schema', 'first schema';
 
 # a quick check to make sure that the database connection works...
 my $rs;
@@ -94,7 +98,7 @@ try {
 };
 
 SKIP: {
-  skip "can't connect to MySQL database", 3 unless $can_connect;
+  skip "can't connect to MySQL database", 4 unless $can_connect;
 
   my $expected_sources = [ qw(
     information_schema
@@ -137,8 +141,9 @@ SKIP: {
   ) ];
 
   is_deeply $d->data_sources, $expected_sources, 'got expected list of data sources in production mode';
-  is_deeply $d->available_databases, $expected_dbs, 'got expected list of available databases in production mode';
+  is_deeply $d->available_database_names, $expected_dbs, 'got expected list of names of available databases in production mode';
   is $schema->get_lanes_by_id('5477_6', 'lane'), 11, 'got expected number of lanes from production DB';
+  is scalar @{ $d->available_database_schemas}, 3, 'got expected number of schemas';
 }
 
 $DB::single = 1;
