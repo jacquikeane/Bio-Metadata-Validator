@@ -6,7 +6,7 @@ package Bio::Metadata::Validator;
 use Moose;
 use namespace::autoclean;
 use Try::Tiny;
-use Text::CSV;
+use Text::CSV_XS;
 use File::Slurp;
 use Digest::MD5 qw( md5_hex );
 use Term::ANSIColor;
