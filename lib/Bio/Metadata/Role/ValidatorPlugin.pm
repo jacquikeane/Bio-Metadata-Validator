@@ -1,5 +1,5 @@
 
-package Bio::Metadata::Validator::PluginRole;
+package Bio::Metadata::Role::ValidatorPlugin;
 
 # ABSTRACT: Moose Role for validation plugins
 
