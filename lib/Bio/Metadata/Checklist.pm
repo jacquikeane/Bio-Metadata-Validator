@@ -10,7 +10,7 @@ use Config::General;
 use Carp qw( croak );
 use Try::Tiny;
 use File::Slurp qw( read_file );
-use MooseX::Types::Moose qw( Str HashRef );
+use Types::Standard qw( Str HashRef );
 
 #-------------------------------------------------------------------------------
 

@@ -16,6 +16,9 @@ use Type::Library -base, -declare => qw(
   Tree
   IDType
   Environment
+  ChecklistType
+  CSVType
+  FileHandleType
 );
 use Type::Utils -all;
 use Types::Standard -types;
@@ -27,6 +30,10 @@ path-help@sanger.ac.uk
 =cut
 
 #-------------------------------------------------------------------------------
+
+class_type ChecklistType, { class => 'Bio::Metadata::Checklist' };
+class_type CSVType, { class => 'Text::CSV_XS' };
+class_type FileHandleType, { class => 'FileHandle' };
 
 declare MD5,
   as Str,

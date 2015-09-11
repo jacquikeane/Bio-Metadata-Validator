@@ -6,7 +6,7 @@ package Bio::Metadata::Validator::Plugin::Taxonomy;
 use Moose;
 use namespace::autoclean;
 
-use MooseX::Types::Moose qw( HashRef Str Int );
+use Types::Standard qw( HashRef Str Int );
 
 use Carp qw( croak );
 

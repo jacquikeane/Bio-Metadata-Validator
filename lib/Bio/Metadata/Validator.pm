@@ -11,7 +11,7 @@ use File::Slurp;
 use Digest::MD5 qw( md5_hex );
 use Term::ANSIColor;
 use Carp qw( croak );
-use MooseX::Types::Moose qw ( Bool HashRef Str );
+use Types::Standard qw( Bool HashRef Str );
 
 with 'MooseX::Role::Pluggable';
 

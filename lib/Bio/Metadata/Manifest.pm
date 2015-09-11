@@ -11,8 +11,8 @@ use Data::UUID;
 use FileHandle;
 use Carp qw( croak );
 use Text::CSV_XS;
-use Bio::Metadata::Types qw( MD5 UUID );
-use MooseX::Types::Moose qw( ArrayRef Str Int );
+use Bio::Metadata::Types qw( MD5 UUID ChecklistType CSVType FileHandleType);
+use Types::Standard qw( ArrayRef Str Int );
 
 =head1 CONTACT
 
@@ -26,7 +26,7 @@ path-help@sanger.ac.uk
 
 has 'checklist' => (
   is       => 'ro',
-  isa      => 'Bio::Metadata::Checklist',
+  isa      => ChecklistType,
   required => 1,
   handles  => [ 'field_names', 'fields' ],
   trigger  => sub {
@@ -196,7 +196,7 @@ rows to the manifest.
 
 has '_csv' => (
   is      => 'ro',
-  isa     => 'Text::CSV_XS',
+  isa     => CSVType,
   writer  => '_set_csv', # for testing
   default => sub {
     my $csv = Text::CSV_XS->new;
@@ -207,7 +207,7 @@ has '_csv' => (
 
 has '_fh' => (
   is      => 'ro',
-  isa     => 'FileHandle',
+  isa     => FileHandleType,
   writer  => '_set_fh', # for testing
   default => sub { FileHandle->new },
 );

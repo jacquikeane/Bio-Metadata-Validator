@@ -6,7 +6,7 @@ package Bio::Metadata::Validator::Plugin::Str;
 use Moose;
 use namespace::autoclean;
 
-use MooseX::Types::Moose qw( Str );
+use Types::Standard qw( +Str );
 
 with 'MooseX::Role::Pluggable::Plugin',
      'Bio::Metadata::Role::ValidatorPlugin';

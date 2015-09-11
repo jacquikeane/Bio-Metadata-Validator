@@ -6,7 +6,7 @@ package Bio::Metadata::Validator::Plugin::Ontology;
 use Moose;
 use namespace::autoclean;
 
-use MooseX::Types::Moose qw( HashRef Str );
+use Types::Standard qw( HashRef Str );
 
 with 'MooseX::Role::Pluggable::Plugin',
      'Bio::Metadata::Role::ValidatorPlugin';

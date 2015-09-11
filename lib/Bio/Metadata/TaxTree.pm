@@ -7,7 +7,7 @@ use Moose;
 use namespace::autoclean;
 
 use Bio::Metadata::Types qw( Tree );
-use MooseX::Types::Moose qw( Str ArrayRef Maybe );
+use Types::Standard qw( Str ArrayRef Maybe );
 use Carp qw( croak );
 use Tree::Simple;
 
