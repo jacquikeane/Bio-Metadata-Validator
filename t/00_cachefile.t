@@ -13,8 +13,10 @@ use File::stat;
 use_ok( 'Test::CacheFile' );
 
 # clear out the cache directory before we start
-remove_tree( $Test::CacheFile::CACHE_DIR, {error => \my $errors} );
-if ( @$errors ) {
+my $errors;
+remove_tree( $Test::CacheFile::CACHE_DIR, {error => \$errors} )
+  if -e $Test::CacheFile::CACHE_DIR;
+if ( $errors ) {
   foreach my $error ( @$errors ) {
     my ( $file, $message ) = %$error;
     die "ERROR: couldn't delete cache directory ($Test::CacheFile::CACHE_DIR): $message"
