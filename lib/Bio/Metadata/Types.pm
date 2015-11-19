@@ -46,7 +46,7 @@ subtype AntimicrobialName,
 
 subtype AMRString,
   as Str,
-  where { m/(([A-Za-z0-9\-\/\(\)\s]+);([SIR]);(lt|le|eq|gt|ge)?(((\d+)?\.)?\d+)(;(\w+))?),?\s*/ },
+  where { m/(([A-Za-z0-9\-\/\(\)\s]+);([SIRU]);(lt|le|eq|gt|ge)?(((\d+)?\.)?\d+)(;(\w+))?),?\s*/ },
   message { 'Not a valid antimicrobial resistance test result' };
 # NOTE this regex isn't quite right. It will still allow broken AMR strings
 # after a comma, e.g. am1;S;10,am2. That second, incomplete term should mean
