@@ -174,7 +174,7 @@ the taxonomic rank for the node
 pre-order tree traversal (see
 L<http://www.sitepoint.com/hierarchical-data-database-2/>).
 
-=over
+=back
 
 =cut
 
